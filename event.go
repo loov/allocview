@@ -16,6 +16,19 @@ const (
 	GC
 )
 
+func (kind Kind) String() string {
+	switch kind {
+	case Alloc: 
+		return "alloc"
+	case Free: 
+		return "free"
+	case GC: 
+		return "gc"
+	default:
+		return "invalid"
+	}
+}
+
 type Event struct {
 	Kind    Kind
 	Address Address
@@ -26,7 +39,7 @@ type Address uintptr
 
 type Allocation struct {
 	Type  string
-	Size  uint64
+	Size  int64
 	Stack string
 }
 
@@ -53,7 +66,7 @@ var (
 	rxFree  = regexp.MustCompile(`^\(0x([0-9a-f]+), 0x([0-9a-f]+)\)$`)
 )
 
-func parseHeader(header string) (Kind, Address, string, uint64) {
+func parseHeader(header string) (Kind, Address, string, int64) {
 	p := strings.IndexAny(header, "( ")
 	if p < 0 {
 		return Invalid, 0, "", 0
@@ -72,11 +85,11 @@ func parseHeader(header string) (Kind, Address, string, uint64) {
 		if err != nil {
 			panic(err)
 		}
-		size, err := strconv.ParseUint(tokens[2], 16, 64)
+		size, err := strconv.ParseInt(tokens[2], 16, 64)
 		if err != nil {
 			panic(err)
 		}
-		return Free, Address(address), tokens[3], size
+		return Alloc, Address(address), tokens[3], size
 	case "tracefree":
 		// tracefree(0xc0006a2090, 0x30)
 		tokens := rxFree.FindStringSubmatch(header[p:])
@@ -88,7 +101,7 @@ func parseHeader(header string) (Kind, Address, string, uint64) {
 		if err != nil {
 			panic(err)
 		}
-		size, err := strconv.ParseUint(tokens[2], 16, 64)
+		size, err := strconv.ParseInt(tokens[2], 16, 64)
 		if err != nil {
 			panic(err)
 		}
