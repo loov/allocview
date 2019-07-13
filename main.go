@@ -12,8 +12,24 @@ func main() {
 	scanner.Split(SplitStack)
 
 	for scanner.Scan() {
+		blocktext := scanner.Text()
+		event, ok := ParseEvent(blocktext)
+		if !ok {
+			continue
+		}
+
 		fmt.Println("============")
-		fmt.Println(scanner.Text())
+		fmt.Println(event)
+	}
+}
+
+type Live struct {
+	Heap map[Address]Allocation
+}
+
+func NewLive() *Live {
+	return &Live{
+		Heap: make(map[Address]Allocation),
 	}
 }
 
