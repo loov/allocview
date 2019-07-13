@@ -8,6 +8,8 @@ import (
 )
 
 func main() {
+	live := NewLive()
+
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Split(SplitStack)
 
@@ -17,6 +19,8 @@ func main() {
 		if !ok {
 			continue
 		}
+
+		live.Include(event)
 
 		fmt.Println("============")
 		fmt.Println(event)
@@ -30,6 +34,15 @@ type Live struct {
 func NewLive() *Live {
 	return &Live{
 		Heap: make(map[Address]Allocation),
+	}
+}
+
+func (live *Live) Include(event Event) {
+	switch event.Kind {
+	case Alloc:
+		live.Heap[event.Address] = event.Allocation
+	case Free:
+		delete(live.Heap, event.Address)
 	}
 }
 
