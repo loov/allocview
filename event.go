@@ -18,11 +18,11 @@ const (
 
 func (kind Kind) String() string {
 	switch kind {
-	case Alloc: 
+	case Alloc:
 		return "alloc"
-	case Free: 
+	case Free:
 		return "free"
-	case GC: 
+	case GC:
 		return "gc"
 	default:
 		return "invalid"
@@ -32,9 +32,9 @@ func (kind Kind) String() string {
 type Event struct {
 	Kind    Kind
 	Address Address
-	Type  string
-	Size  int64
-	Stack string
+	Type    string
+	Size    int64
+	Stack   string
 }
 
 type Address uintptr
@@ -49,9 +49,9 @@ func ParseEvent(block string) (Event, bool) {
 	return Event{
 		Kind:    kind,
 		Address: address,
-		Type:  typ,
-		Size:  size,
-		Stack: stack,
+		Type:    typ,
+		Size:    size,
+		Stack:   stack,
 	}, true
 }
 
