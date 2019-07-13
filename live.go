@@ -85,18 +85,34 @@ func (live *Live) Include(event Event) {
 	}
 }
 
+func (live *Live) Snapshot(w io.Writer) {
+	live.Lock()
+	allocs := make(map[Address]Allocation, len(live.Heap))
+	for addr, alloc := range live.Heap {
+		allocs[addr] = alloc
+	}
+	typeName := live.TypeToName
+	live.Unlock()
+
+	live.WriteSummary(w, typeName, allocs)
+}
+
 func (live *Live) DeltaSnapshot(w io.Writer) {
 	live.Lock()
 	size := len(live.Delta)
 	live.Unlock()
 
-	delta := make(map[Address]Allocation, size)
+	allocs := make(map[Address]Allocation, size)
 
 	live.Lock()
-	live.Delta, delta = delta, live.Delta
+	live.Delta, allocs = allocs, live.Delta
 	typeName := live.TypeToName
 	live.Unlock()
 
+	live.WriteSummary(w, typeName, allocs)
+}
+
+func (live *Live) WriteSummary(w io.Writer, typeName []string, allocs map[Address]Allocation) {
 	type TypeAllocation struct {
 		Type Type
 		Size int64
@@ -106,7 +122,7 @@ func (live *Live) DeltaSnapshot(w io.Writer) {
 	for typ := range allocationsByType {
 		allocationsByType[typ].Type = Type(typ)
 	}
-	for _, alloc := range delta {
+	for _, alloc := range allocs {
 		allocationsByType[alloc.Type].Size += alloc.Size
 	}
 	sort.Slice(allocationsByType, func(i, k int) bool {

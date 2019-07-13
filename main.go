@@ -3,49 +3,92 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/signal"
-	"sort"
 	"sync"
 	"syscall"
 )
 
 func main() {
-	fmt.Printf("pid=%v\n", os.Getpid())
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var group Group
 
 	live := NewLive()
 
-	dump := make(chan os.Signal, 1)
-	done := make(chan struct{})
-	signal.Notify(dump, syscall.SIGUSR1, os.Kill)
+	group.Go(func() {
+		MonitorSignals(ctx, live)
+	})
 
-	counter := 0
+	Parse(live, os.Stdin)
+
+	cancel()
+	group.Wait()
+
+	live.WriteSummary(os.Stdout, live.TypeToName, live.Heap)
+}
+
+type Group struct {
+	wait sync.WaitGroup
+}
+
+func (group *Group) Go(fn func()) {
+	group.wait.Add(1)
 	go func() {
-		defer close(done)
-		for sig := range dump {
-			if sig == os.Kill {
-				break
-			}
+		defer group.wait.Done()
+		fn()
+	}()
+}
 
-			w, _ := os.Create(fmt.Sprintf("snapshot-%03d.log", counter))
+func (group *Group) Wait() {
+	group.wait.Wait()
+}
+
+func MonitorSignals(ctx context.Context, live *Live) {
+	dump := make(chan os.Signal, 1)
+
+	go func() {
+		select {
+		case <-ctx.Done():
+			dump <- os.Kill
+		}
+	}()
+
+	signal.Notify(dump,
+		syscall.SIGUSR1, syscall.SIGUSR2,
+		os.Kill,
+	)
+
+	snapshot := 0
+	delta := 0
+
+	for sig := range dump {
+		if sig == os.Kill {
+			break
+		}
+
+		switch sig {
+		case os.Kill:
+			return
+		case syscall.SIGUSR1:
+			w, _ := os.Create(fmt.Sprintf("snapshot-%03d.log", snapshot))
 			buf := bufio.NewWriter(w)
 			live.DeltaSnapshot(buf)
 			buf.Flush()
 			w.Close()
+			snapshot++
 
-			counter++
+		case syscall.SIGUSR2:
+			w, _ := os.Create(fmt.Sprintf("delta-%03d.log", delta))
+			buf := bufio.NewWriter(w)
+			live.Snapshot(buf)
+			buf.Flush()
+			w.Close()
+			delta++
 		}
-	}()
-
-	Parse(live, os.Stdin)
-
-	dump <- os.Kill
-	<-done
-
-	for typ, alloc := range live.TotalAllocs {
-		fmt.Println(live.TypeToName[typ], alloc)
 	}
 }
 
