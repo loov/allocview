@@ -5,6 +5,8 @@ import (
 	"io"
 	"sort"
 	"sync"
+
+	"github.com/loov/allocview/trace"
 )
 
 type Live struct {
@@ -13,8 +15,8 @@ type Live struct {
 	NameToType map[string]Type
 	TypeToName []string
 
-	Heap  map[Address]Allocation
-	Delta map[Address]Allocation
+	Heap  map[trace.Address]Allocation
+	Delta map[trace.Address]Allocation
 
 	// indexed by type
 	Allocated   []int64
@@ -34,8 +36,8 @@ func NewLive() *Live {
 		NameToType: make(map[string]Type, 1<<20),
 		TypeToName: make([]string, 0, 1<<20),
 
-		Heap:  make(map[Address]Allocation, 1<<20),
-		Delta: make(map[Address]Allocation, 1<<20),
+		Heap:  make(map[trace.Address]Allocation, 1<<20),
+		Delta: make(map[trace.Address]Allocation, 1<<20),
 
 		Allocated:   make([]int64, 0, 1<<20),
 		TotalAllocs: make([]int64, 0, 1<<20),
@@ -58,13 +60,13 @@ func (live *Live) findType(name string) Type {
 	return typ
 }
 
-func (live *Live) Include(event Event) {
+func (live *Live) Include(event trace.Event) {
 	live.Lock()
 	defer live.Unlock()
 
 	typ := live.findType(event.Type)
 	switch event.Kind {
-	case Alloc:
+	case trace.Alloc:
 		live.Heap[event.Address] = Allocation{
 			Type:  typ,
 			Size:  event.Size,
@@ -78,7 +80,7 @@ func (live *Live) Include(event Event) {
 		live.Allocated[typ] += event.Size
 		live.TotalAllocs[typ] += event.Size
 
-	case Free:
+	case trace.Free:
 		delete(live.Heap, event.Address)
 		delete(live.Delta, event.Address)
 		live.Allocated[typ] -= event.Size
@@ -87,7 +89,7 @@ func (live *Live) Include(event Event) {
 
 func (live *Live) Snapshot(w io.Writer) {
 	live.Lock()
-	allocs := make(map[Address]Allocation, len(live.Heap))
+	allocs := make(map[trace.Address]Allocation, len(live.Heap))
 	for addr, alloc := range live.Heap {
 		allocs[addr] = alloc
 	}
@@ -102,7 +104,7 @@ func (live *Live) DeltaSnapshot(w io.Writer) {
 	size := len(live.Delta)
 	live.Unlock()
 
-	allocs := make(map[Address]Allocation, size)
+	allocs := make(map[trace.Address]Allocation, size)
 
 	live.Lock()
 	live.Delta, allocs = allocs, live.Delta
@@ -112,7 +114,7 @@ func (live *Live) DeltaSnapshot(w io.Writer) {
 	live.WriteSummary(w, typeName, allocs)
 }
 
-func (live *Live) WriteSummary(w io.Writer, typeName []string, allocs map[Address]Allocation) {
+func (live *Live) WriteSummary(w io.Writer, typeName []string, allocs map[trace.Address]Allocation) {
 	type TypeAllocation struct {
 		Type Type
 		Size int64

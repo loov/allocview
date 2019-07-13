@@ -10,6 +10,8 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/loov/allocview/trace"
 )
 
 func main() {
@@ -98,7 +100,7 @@ func Parse(live *Live, in io.Reader) {
 
 	for scanner.Scan() {
 		blocktext := scanner.Text()
-		event, ok := ParseEvent(blocktext)
+		event, ok := trace.ParseEvent(blocktext)
 		if !ok {
 			continue
 		}
