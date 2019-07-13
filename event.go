@@ -32,16 +32,12 @@ func (kind Kind) String() string {
 type Event struct {
 	Kind    Kind
 	Address Address
-	Allocation
-}
-
-type Address uintptr
-
-type Allocation struct {
 	Type  string
 	Size  int64
 	Stack string
 }
+
+type Address uintptr
 
 func ParseEvent(block string) (Event, bool) {
 	header, stack := splitBlock(block)
@@ -53,11 +49,9 @@ func ParseEvent(block string) (Event, bool) {
 	return Event{
 		Kind:    kind,
 		Address: address,
-		Allocation: Allocation{
-			Type:  typ,
-			Size:  size,
-			Stack: stack,
-		},
+		Type:  typ,
+		Size:  size,
+		Stack: stack,
 	}, true
 }
 
