@@ -6,17 +6,41 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"sort"
 	"sync"
+	"syscall"
 )
 
 func main() {
+	fmt.Printf("pid=%v\n", os.Getpid())
+
 	live := NewLive()
+
+	dump := make(chan os.Signal, 1)
+	done := make(chan struct{})
+	signal.Notify(dump, syscall.SIGUSR1, os.Kill)
+
+	counter := 0
+	go func() {
+		defer close(done)
+		for sig := range dump {
+			if sig == os.Kill {
+				break
+			}
+
+			w, _ := os.Create(fmt.Sprintf("snapshot-%03d.log", counter))
+			buf := bufio.NewWriter(w)
+			live.DeltaSnapshot(buf)
+			buf.Flush()
+			w.Close()
+
+			counter++
+		}
+	}()
 
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Split(SplitStack)
-
-	counter := 0
 
 	for scanner.Scan() {
 		blocktext := scanner.Text()
@@ -26,15 +50,10 @@ func main() {
 		}
 
 		live.Include(event)
-
-		counter++
-
-		if counter%10 == 0 {
-			w, _ := os.Create(fmt.Sprintf("dump-%d.log", counter))
-			live.DeltaSnapshot(w)
-			w.Close()
-		}
 	}
+
+	dump <- os.Kill
+	<-done
 
 	for typ, alloc := range live.TotalAllocs {
 		fmt.Println(live.TypeToName[typ], alloc)
@@ -111,6 +130,7 @@ func (live *Live) Include(event Event) {
 		}
 		live.Allocated[typ] += event.Size
 		live.TotalAllocs[typ] += event.Size
+
 	case Free:
 		delete(live.Heap, event.Address)
 		delete(live.Delta, event.Address)
