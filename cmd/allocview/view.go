@@ -32,7 +32,7 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 	defer metrics.Unlock()
 
 	const MetricHeight = 50
-	const SampleWidth = 5
+	const SampleWidth = 3
 
 	samples := ctx.Area.Size().X / SampleWidth
 	// TODO: clamp to max size

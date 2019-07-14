@@ -44,7 +44,7 @@ func main() {
 		panic(err)
 	}
 
-	metrics := NewMetrics(time.Now(), 300*time.Millisecond, 2<<10)
+	metrics := NewMetrics(time.Now(), 30*time.Millisecond, 2<<10)
 
 	go func() {
 		for {
@@ -57,7 +57,7 @@ func main() {
 				})
 			}
 
-			millis := 100 + rand.Intn(100)
+			millis := 10 + rand.Intn(10)
 			time.Sleep(time.Duration(millis) * time.Millisecond)
 		}
 	}()
