@@ -50,11 +50,13 @@ func (metrics *Metrics) Update(name string, now time.Time, sample Sample) {
 		}
 	}
 
+	metric.Live += sample.Allocs - sample.Frees
 	metric.Samples[sampleTime].Add(sample)
 }
 
 type Metric struct {
 	Name    string
+	Live    int64
 	Samples []Sample
 }
 
