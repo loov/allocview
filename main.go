@@ -4,17 +4,22 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"os"
 	"os/signal"
-	"sync"
+	"runtime"
 	"syscall"
 
 	"github.com/loov/allocview/trace"
 )
 
+func init() { runtime.LockOSThread() }
+
 func main() {
+	flag.Parse()
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var group Group
@@ -31,22 +36,6 @@ func main() {
 	group.Wait()
 
 	live.WriteSummary(os.Stdout, live.TypeToName, live.Heap)
-}
-
-type Group struct {
-	wait sync.WaitGroup
-}
-
-func (group *Group) Go(fn func()) {
-	group.wait.Add(1)
-	go func() {
-		defer group.wait.Done()
-		fn()
-	}()
-}
-
-func (group *Group) Wait() {
-	group.wait.Wait()
 }
 
 func MonitorSignals(ctx context.Context, live *Live) {
