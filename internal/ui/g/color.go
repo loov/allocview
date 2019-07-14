@@ -22,6 +22,9 @@ func RGBAHex(hex uint32) Color {
 	}
 }
 
+// RGB returns color based on RGB in range 0..1
+func RGB(r, g, b float32) Color { return Color{Sat8(r), Sat8(g), Sat8(b), 0xFF} }
+
 // RGBA returns color based on RGBA in range 0..1
 func RGBA(r, g, b, a float32) Color { return Color{Sat8(r), Sat8(g), Sat8(b), Sat8(a)} }
 
