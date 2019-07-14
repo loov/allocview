@@ -32,6 +32,7 @@ type Mouse struct {
 		Pos  g.Vector
 		Down bool
 	}
+	Scroll  g.Vector
 	Capture func(*Context) (done bool)
 }
 
@@ -50,6 +51,7 @@ func (mouse *Mouse) BeginFrame() {
 func (mouse *Mouse) EndFrame(ctx *Context) {
 	mouse.Last.Pos = mouse.Pos
 	mouse.Last.Down = mouse.Down
+	mouse.Scroll = g.V0
 
 	if mouse.Capture != nil {
 		done := mouse.Capture(ctx)

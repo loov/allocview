@@ -46,6 +46,8 @@ func NewApp(window *glfw.Window, view View) *App {
 }
 
 func (app *App) Run() {
+	app.Window.SetScrollCallback(app.ScrollCallback)
+
 	for !app.Window.ShouldClose() {
 		if app.Window.GetKey(glfw.KeyEscape) == glfw.Press {
 			return
@@ -60,6 +62,11 @@ func (app *App) Run() {
 		app.Window.SwapBuffers()
 		glfw.PollEvents()
 	}
+}
+
+func (app *App) ScrollCallback(_ *glfw.Window, xoff, yoff float64) {
+	app.Context.Input.Mouse.Scroll.X += float32(xoff)
+	app.Context.Input.Mouse.Scroll.Y += float32(yoff)
 }
 
 func (app *App) UpdateFrame() {
