@@ -6,7 +6,7 @@ import (
 )
 
 type Context struct {
-	*Render
+	*Layers
 	Input *Input
 
 	Area g.Rect
@@ -18,13 +18,12 @@ type Context struct {
 
 func NewContext() *Context {
 	return &Context{
-		Render: &Render{},
+		Layers: &Layers{},
 		Input:  &Input{},
 	}
 }
 
-// TODO: rename to Layers
-type Render struct {
+type Layers struct {
 	Frame  draw.Frame
 	Draw   *draw.List
 	Hover  *draw.List
@@ -33,7 +32,7 @@ type Render struct {
 
 func (ctx *Context) BeginFrame(area g.Rect) {
 	ctx.Area = area
-	ctx.Render.BeginFrame()
+	ctx.Layers.BeginFrame()
 	ctx.Input.Mouse.BeginFrame()
 }
 
@@ -41,9 +40,9 @@ func (ctx *Context) EndFrame() {
 	ctx.Input.Mouse.EndFrame(ctx)
 }
 
-func (render *Render) BeginFrame() {
-	render.Frame.Reset()
-	render.Draw = render.Frame.Layer()
-	render.Hover = render.Frame.Layer()
-	render.Cursor = render.Frame.Layer()
+func (layers *Layers) BeginFrame() {
+	layers.Frame.Reset()
+	layers.Draw = layers.Frame.Layer()
+	layers.Hover = layers.Frame.Layer()
+	layers.Cursor = layers.Frame.Layer()
 }

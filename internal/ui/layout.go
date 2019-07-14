@@ -7,7 +7,7 @@ import (
 func (ctx *Context) Child(area g.Rect) *Context {
 	ctx.Count++
 	return &Context{
-		Render: ctx.Render,
+		Layers: ctx.Layers,
 		Input:  ctx.Input,
 		Area:   area,
 		Index:  ctx.Count - 1,

@@ -102,7 +102,7 @@ func (app *App) UpdateFrame() {
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 	}
 
-	for _, list := range app.Context.Render.Frame.Lists {
+	for _, list := range app.Context.Layers.Frame.Lists {
 		render.List(w, h, list)
 	}
 }
