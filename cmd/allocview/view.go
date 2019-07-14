@@ -7,8 +7,6 @@ import (
 
 var (
 	BackgroundColor = g.Color{0, 0, 0, 0xFF}
-	AllocsColor     = g.HSL(0, 0.6, 0.6)
-	FreesColor      = g.HSL(0.3, 0.6, 0.6)
 )
 
 type MetricsView struct {
@@ -32,6 +30,7 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 	defer metrics.Unlock()
 
 	const MetricHeight = 50
+	const HeaderHeight = 12
 	const SampleWidth = 3
 
 	samples := ctx.Area.Size().X / SampleWidth
@@ -45,6 +44,11 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 
 	top := float32(0.0)
 	for i, metric := range metrics.List {
+		header := ctx.Row(top, top+MetricHeight)
+		_ = header
+		// TODO: add font rendering
+		top += HeaderHeight
+
 		ctx := ctx.Row(top, top+MetricHeight)
 		top += MetricHeight
 
@@ -56,21 +60,24 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 
 		max := metric.Max()
 		maxValue := Max(max.Allocs, max.Frees)
-		scale := (ctx.Area.Size().Y / 2) / float32(maxValue)
+		prop := 1.0 / float32(maxValue+1)
+		scale := (ctx.Area.Size().Y / 2) / float32(maxValue+1)
 
 		corner := ctx.Area.LeftCenter()
 		for p := low; p < high; p++ {
 			sample := metric.Samples[p%metrics.SampleCount]
 
+			allocsColor := g.HSL(0, 0.6, g.LerpClamp(float32(sample.Allocs)*prop, 0.3, 0.7))
 			ctx.Draw.FillRect(&g.Rect{
 				Min: corner,
 				Max: corner.Add(g.V(SampleWidth, float32(sample.Allocs)*scale)),
-			}, AllocsColor)
+			}, allocsColor)
 
+			freesColor := g.HSL(0.3, 0.6, g.LerpClamp(float32(sample.Frees)*prop, 0.3, 0.7))
 			ctx.Draw.FillRect(&g.Rect{
 				Min: corner,
 				Max: corner.Add(g.V(SampleWidth, float32(-sample.Frees)*scale)),
-			}, FreesColor)
+			}, freesColor)
 
 			corner.X += SampleWidth
 		}

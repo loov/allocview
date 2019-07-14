@@ -1,15 +1,18 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"flag"
-	"fmt"
+	"io"
 	"log"
-	"math/rand"
+	"os"
 	"runtime"
 	"time"
 
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
+	"github.com/loov/allocview/trace"
 )
 
 func init() { runtime.LockOSThread() }
@@ -44,25 +47,58 @@ func main() {
 		panic(err)
 	}
 
-	metrics := NewMetrics(time.Now(), 30*time.Millisecond, 2<<10)
+	interval := time.Second
+	metrics := NewMetrics(time.Now(), interval, 2<<10)
 
+	go Parse(metrics, os.Stdin)
 	go func() {
-		for {
-			for i := 0; i < 10; i++ {
-				traceName := fmt.Sprintf("Trace %d", rand.Intn(10))
-
-				metrics.Update(traceName, time.Now(), Sample{
-					Allocs: rand.Int63n(1000),
-					Frees:  rand.Int63n(1000),
-				})
-			}
-
-			millis := 10 + rand.Intn(10)
-			time.Sleep(time.Duration(millis) * time.Millisecond)
+		tick := time.NewTicker(interval)
+		for range tick.C {
+			metrics.Update("time", time.Now(), Sample{})
 		}
 	}()
 
 	view := NewMetricsView(metrics)
 	app := NewApp(window, view)
 	app.Run()
+}
+
+func Parse(metrics *Metrics, in io.Reader) {
+	scanner := bufio.NewScanner(in)
+	scanner.Split(SplitStack)
+
+	for scanner.Scan() {
+		blocktext := scanner.Text()
+		event, ok := trace.ParseEvent(blocktext)
+		if !ok {
+			continue
+		}
+
+		now := time.Now()
+
+		switch event.Kind {
+		case trace.Alloc:
+			metrics.Update(event.Type, now, Sample{
+				Allocs: event.Size,
+			})
+		case trace.Free:
+			metrics.Update(event.Type, now, Sample{
+				Frees: event.Size,
+			})
+		}
+
+	}
+}
+
+func SplitStack(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.Index(data, []byte{'\n', '\n'}); i >= 0 {
+		return i + 2, data[:i], nil
+	}
+	if atEOF {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
 }

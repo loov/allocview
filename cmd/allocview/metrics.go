@@ -31,6 +31,9 @@ func NewMetrics(since time.Time, sampleDuration time.Duration, sampleCount int) 
 }
 
 func (metrics *Metrics) Update(name string, now time.Time, sample Sample) {
+	metrics.Lock()
+	defer metrics.Unlock()
+
 	metric, ok := metrics.ByName[name]
 	if !ok {
 		metric = &Metric{
