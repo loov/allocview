@@ -11,6 +11,8 @@ var (
 
 type MetricsView struct {
 	Metrics *Metrics
+
+	Scroll float32
 }
 
 func NewMetricsView(metrics *Metrics) *MetricsView {
@@ -44,7 +46,8 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 	}
 	high := low + int(g.Ceil(samples))
 
-	top := float32(0.0)
+	view.Scroll += ctx.Input.Mouse.Scroll.Y
+	top := view.Scroll
 	for i, metric := range metrics.List {
 		header := ctx.Row(top, top+MetricHeight)
 		_ = header
