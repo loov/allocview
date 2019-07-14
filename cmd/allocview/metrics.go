@@ -30,6 +30,17 @@ func NewMetrics(since time.Time, sampleDuration time.Duration, sampleCount int) 
 	}
 }
 
+func (metrics *Metrics) Reset() {
+	metrics.Lock()
+	defer metrics.Unlock()
+
+	for _, m := range metrics.List {
+		for i := range m.Samples {
+			m.Samples[i].Reset()
+		}
+	}
+}
+
 func (metrics *Metrics) Update(name string, now time.Time, sample Sample) {
 	metrics.Lock()
 	defer metrics.Unlock()

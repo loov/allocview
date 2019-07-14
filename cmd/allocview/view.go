@@ -19,7 +19,9 @@ func NewMetricsView(metrics *Metrics) *MetricsView {
 	}
 }
 
-func (view *MetricsView) Reset() {}
+func (view *MetricsView) Reset() {
+	view.Metrics.Reset()
+}
 
 func (view *MetricsView) Update(ctx *ui.Context) {
 	ctx.Draw.FillRect(&ctx.Area, BackgroundColor)
@@ -79,11 +81,15 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 				Max: corner.Add(g.V(SampleWidth, float32(-sample.Frees)*scale)),
 			}, freesColor)
 
+			frame := g.Rect{
+				Min: g.Vector{corner.X, ctx.Area.Min.Y},
+				Max: g.Vector{corner.X + SampleWidth, ctx.Area.Max.Y},
+			}
 			if p == metrics.SampleTime {
-				ctx.Draw.FillRect(&g.Rect{
-					Min: g.Vector{corner.X, ctx.Area.Min.Y},
-					Max: g.Vector{corner.X + SampleWidth, ctx.Area.Max.Y},
-				}, g.Color{0xff, 0xff, 0xff, 0x30})
+				ctx.Hover.FillRect(&frame, g.Color{0xff, 0xff, 0xff, 0x30})
+			}
+			if frame.Contains(ctx.Input.Mouse.Pos) {
+				ctx.Hover.FillRect(&frame, g.Color{0x80, 0x80, 0xff, 0x30})
 			}
 
 			corner.X += SampleWidth
