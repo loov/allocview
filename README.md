@@ -7,6 +7,8 @@ TODO:
 * [ ] summary of stack traces
 * [ ] type, summary of stack traces
 * [ ] graph output
+* [ ] multiple draw buffers
+* [ ] text output
 
 # How to use
 
