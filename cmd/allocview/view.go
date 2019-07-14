@@ -79,6 +79,13 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 				Max: corner.Add(g.V(SampleWidth, float32(-sample.Frees)*scale)),
 			}, freesColor)
 
+			if p == metrics.SampleTime {
+				ctx.Draw.FillRect(&g.Rect{
+					Min: g.Vector{corner.X, ctx.Area.Min.Y},
+					Max: g.Vector{corner.X + SampleWidth, ctx.Area.Max.Y},
+				}, g.Color{0xff, 0xff, 0xff, 0x30})
+			}
+
 			corner.X += SampleWidth
 		}
 	}

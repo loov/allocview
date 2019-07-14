@@ -18,6 +18,8 @@ import (
 func init() { runtime.LockOSThread() }
 
 func main() {
+	var interval time.Duration
+	flag.DurationVar(&interval, "interval", time.Second, "sampling interval")
 	flag.Parse()
 
 	if err := glfw.Init(); err != nil {
@@ -47,7 +49,6 @@ func main() {
 		panic(err)
 	}
 
-	interval := time.Second
 	metrics := NewMetrics(time.Now(), interval, 2<<10)
 
 	go Parse(metrics, os.Stdin)
@@ -86,7 +87,6 @@ func Parse(metrics *Metrics, in io.Reader) {
 				Frees: event.Size,
 			})
 		}
-
 	}
 }
 

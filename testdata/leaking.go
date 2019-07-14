@@ -23,7 +23,7 @@ func main() {
 			fmt.Println(-len(p), total)
 		}
 
-		jitter := 1 + rand.Intn(3)
-		time.Sleep(time.Duration(jitter) * time.Second)
+		jitter := 30 + rand.Intn(30)
+		time.Sleep(time.Duration(jitter) * time.Millisecond)
 	}
 }
