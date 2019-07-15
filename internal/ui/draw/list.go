@@ -89,6 +89,8 @@ func (list *List) updateTexture() {
 type TextureID int32
 type Callback func(*List, *Command)
 
+const CommandSplitThreshold = 0x8000
+
 type Command struct {
 	Count    Index
 	Clip     g.Rect
