@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"flag"
+	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"os"
 	"runtime"
 	"time"
@@ -20,6 +22,10 @@ func init() { runtime.LockOSThread() }
 func main() {
 	var interval time.Duration
 	flag.DurationVar(&interval, "interval", time.Second, "sampling interval")
+
+	var simulate bool
+	flag.BoolVar(&simulate, "simulate", false, "simulate memory usage")
+
 	flag.Parse()
 
 	if err := glfw.Init(); err != nil {
@@ -51,13 +57,28 @@ func main() {
 
 	metrics := NewMetrics(time.Now(), interval, 2<<10)
 
-	go Parse(metrics, os.Stdin)
-	go func() {
-		tick := time.NewTicker(interval)
-		for range tick.C {
-			metrics.Update("time", time.Now(), Sample{})
-		}
-	}()
+	if simulate {
+		go func() {
+			for {
+				for i := 0; i < 10; i++ {
+					span := fmt.Sprintf("trace %d", i)
+					metrics.Update(span, time.Now(), Sample{
+						Allocs: 100 + rand.Int63n(10000),
+						Frees:  100 + rand.Int63n(10000),
+					})
+					time.Sleep(10 * time.Millisecond)
+				}
+			}
+		}()
+	} else {
+		go Parse(metrics, os.Stdin)
+		go func() {
+			tick := time.NewTicker(interval)
+			for range tick.C {
+				metrics.Update("time", time.Now(), Sample{})
+			}
+		}()
+	}
 
 	view := NewMetricsView(metrics)
 	app := NewApp(window, view)
