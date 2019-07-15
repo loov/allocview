@@ -36,7 +36,8 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 	defer metrics.Unlock()
 
 	const MetricHeight = 50
-	const HeaderHeight = 12
+	const MetricPadding = 5
+	const CaptionHeight = 12
 	const SampleWidth = 3
 
 	samples := ctx.Area.Size().X / SampleWidth
@@ -51,12 +52,14 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 	view.Scroll += ctx.Input.Mouse.Scroll.Y
 	top := view.Scroll
 	for i, metric := range metrics.List {
-		header := ctx.Row(top, top+HeaderHeight)
-		header.Hover.Text(strings.ToUpper(metric.Name), header.Area.BottomLeft(), HeaderHeight*0.6, 1, g.White)
-		top += HeaderHeight
-
+		top += MetricPadding
 		ctx := ctx.Row(top, top+MetricHeight)
 		top += MetricHeight
+
+		// TODO: skip hidden rows
+
+		headerPosition := ctx.Area.TopLeft().Add(g.Vector{Y: CaptionHeight * 1.2})
+		ctx.Hover.Text(strings.ToUpper(metric.Name), headerPosition, CaptionHeight, 1, g.White)
 
 		color := g.RGB(0.1, 0.1, 0.1)
 		if i%2 == 1 {
