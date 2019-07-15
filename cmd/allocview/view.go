@@ -72,17 +72,21 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 		for p := low; p < high; p++ {
 			sample := metric.Samples[p%metrics.SampleCount]
 
-			allocsColor := g.HSL(0, 0.6, g.LerpClamp(float32(sample.Allocs)*prop, 0.3, 0.7))
-			ctx.Draw.FillRect(&g.Rect{
-				Min: corner,
-				Max: corner.Add(g.V(SampleWidth, float32(sample.Allocs)*scale)),
-			}, allocsColor)
+			if sample.Allocs > 0 {
+				allocsColor := g.HSL(0, 0.6, g.LerpClamp(float32(sample.Allocs)*prop, 0.3, 0.7))
+				ctx.Draw.FillRect(&g.Rect{
+					Min: corner,
+					Max: corner.Add(g.V(SampleWidth, float32(sample.Allocs)*scale)),
+				}, allocsColor)
+			}
 
-			freesColor := g.HSL(0.3, 0.6, g.LerpClamp(float32(sample.Frees)*prop, 0.3, 0.7))
-			ctx.Draw.FillRect(&g.Rect{
-				Min: corner,
-				Max: corner.Add(g.V(SampleWidth, float32(-sample.Frees)*scale)),
-			}, freesColor)
+			if sample.Frees > 0 {
+				freesColor := g.HSL(0.3, 0.6, g.LerpClamp(float32(sample.Frees)*prop, 0.3, 0.7))
+				ctx.Draw.FillRect(&g.Rect{
+					Min: corner,
+					Max: corner.Add(g.V(SampleWidth, float32(-sample.Frees)*scale)),
+				}, freesColor)
+			}
 
 			frame := g.Rect{
 				Min: g.Vector{corner.X, ctx.Area.Min.Y},
