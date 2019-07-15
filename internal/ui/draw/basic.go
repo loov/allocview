@@ -8,6 +8,10 @@ func (list *List) StrokeLine(points []g.Vector, thickness float32, color g.Color
 	if len(points) < 2 || color.Transparent() || thickness == 0 {
 		return
 	}
+	// in the worst case we have
+	//   3 triangles per line-segment
+	//   3 vertices per point
+	list.Primitive_Ensure(len(points)*9, len(points)*3)
 
 	// TODO: optimize for thin line
 	startIndexCount := len(list.Indicies)
@@ -74,6 +78,11 @@ func (list *List) StrokeColoredLine(points []g.Vector, thickness float32, colors
 	if len(points) < 2 || thickness == 0 || len(colors) != len(points) {
 		return
 	}
+
+	// in the worst case we have
+	//   3 triangles per line-segment
+	//   3 vertices per point
+	list.Primitive_Ensure(len(points)*9, len(points)*3)
 
 	// TODO: optimize for thin line
 	startIndexCount := len(list.Indicies)
@@ -146,6 +155,11 @@ func (list *List) StrokeClosedLine(points []g.Vector, thickness float32, color g
 		list.StrokeLine(points, thickness, color)
 		return
 	}
+
+	// in the worst case we have
+	//   3 triangles per line-segment
+	//   3 vertices per point
+	list.Primitive_Ensure(len(points)*9, len(points)*3)
 
 	startIndexCount := len(list.Indicies)
 
@@ -251,6 +265,11 @@ func (list *List) FillArc(center g.Vector, R float32, start, sweep float32, colo
 	// N := sweep * R gives one segment per pixel
 	N := Index(g.Clamp(g.Abs(sweep)*R/g.Tau, 3, segmentsPerArc))
 
+	// in the worst case we have
+	//   2 triangles per point
+	//   3 vertices per point
+	list.Primitive_Ensure(int(N)*6, int(N)*2)
+
 	theta := sweep / float32(N)
 	rots, rotc := g.Sincos(theta)
 	dy, dx := g.Sincos(start)
@@ -283,6 +302,11 @@ func (list *List) FillCircle(center g.Vector, R float32, color g.Color) {
 
 	// N := 2 * PI * R gives one segment per pixel
 	N := Index(g.Clamp(R, 3, segmentsPerArc))
+
+	// in the worst case we have
+	//   2 triangles per point
+	//   3 vertices per point
+	list.Primitive_Ensure(int(N)*6, int(N)*2)
 
 	theta := g.Tau / float32(N)
 	rots, rotc := g.Sincos(theta)

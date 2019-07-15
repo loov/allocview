@@ -15,7 +15,7 @@ func (list *List) FillRect(r *g.Rect, color g.Color) {
 
 func (list *List) StrokeRect(r *g.Rect, lineWidth float32, color g.Color) {
 	a0, b0, c0, d0 := r.Corners()
-	a1, b1, c1, d1 := r.Deflate(g.Vector{lineWidth, lineWidth}).Corners()
+	a1, b1, c1, d1 := r.Deflate(g.Vector{X: lineWidth, Y: lineWidth}).Corners()
 
 	list.Primitive_Reserve(6*4, 8)
 

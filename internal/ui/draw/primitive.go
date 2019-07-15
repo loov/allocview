@@ -10,9 +10,15 @@ func (list *List) BeginCommand() {
 	list.CurrentCommand = &list.Commands[len(list.Commands)-1]
 }
 
+func (list *List) Primitive_Ensure(index_count, vertex_count int) {
+	if list.CurrentCommand.Count+Index(index_count) > CommandSplitThreshold {
+		list.BeginCommand()
+	}
+}
+
 func (list *List) Primitive_Reserve(index_count, vertex_count int) {
-	cmd := list.CurrentCommand
-	cmd.Count += Index(index_count)
+	list.Primitive_Ensure(index_count, vertex_count)
+	list.CurrentCommand.Count += Index(index_count)
 }
 
 func (list *List) Primitive_Rect(r *g.Rect, color g.Color) {
