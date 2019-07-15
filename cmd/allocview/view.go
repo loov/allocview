@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/loov/allocview/internal/ui"
 	"github.com/loov/allocview/internal/ui/g"
 )
@@ -49,9 +51,8 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 	view.Scroll += ctx.Input.Mouse.Scroll.Y
 	top := view.Scroll
 	for i, metric := range metrics.List {
-		header := ctx.Row(top, top+MetricHeight)
-		_ = header
-		// TODO: add font rendering
+		header := ctx.Row(top, top+HeaderHeight)
+		header.Hover.Text(strings.ToUpper(metric.Name), header.Area.BottomLeft(), HeaderHeight*0.6, 1, g.White)
 		top += HeaderHeight
 
 		ctx := ctx.Row(top, top+MetricHeight)
