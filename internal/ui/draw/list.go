@@ -1,6 +1,8 @@
 package draw
 
-import "github.com/loov/allocview/internal/ui/g"
+import (
+	"github.com/loov/allocview/internal/ui/g"
+)
 
 type List struct {
 	Commands []Command
@@ -13,15 +15,17 @@ type List struct {
 
 	ClipStack    []g.Rect
 	TextureStack []TextureID
+
+	*Textures
 }
 
-func NewList() *List {
+func NewList(textures *Textures) *List {
 	list := &List{}
-	list.Reset()
+	list.Reset(textures)
 	return list
 }
 
-func (list *List) Reset() {
+func (list *List) Reset(textures *Textures) {
 	list.Commands = list.Commands[:0:cap(list.Commands)]
 	list.Indicies = list.Indicies[:0:cap(list.Indicies)]
 	list.Vertices = list.Vertices[:0:cap(list.Vertices)]
@@ -32,6 +36,8 @@ func (list *List) Reset() {
 
 	list.ClipStack = nil
 	list.TextureStack = nil
+
+	list.Textures = textures
 
 	list.BeginCommand()
 }
@@ -78,12 +84,14 @@ func (list *List) PopTexture() {
 }
 
 func (list *List) updateTexture() {
-	if list.CurrentCommand == nil ||
-		list.CurrentCommand.Texture != list.CurrentTexture {
+	if list.CurrentCommand == nil {
 		list.BeginCommand()
 		return
 	}
-	list.CurrentCommand.Texture = list.CurrentTexture
+	if list.CurrentCommand.Texture != list.CurrentTexture {
+		list.BeginCommand()
+		return
+	}
 }
 
 type TextureID int32

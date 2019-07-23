@@ -58,8 +58,7 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 
 		// TODO: skip hidden rows
 
-		headerPosition := ctx.Area.TopLeft().Add(g.Vector{Y: CaptionHeight * 1.2})
-		ctx.Hover.Text(strings.ToUpper(metric.Name), headerPosition, CaptionHeight, 1, g.White)
+		DefaultFont.Draw(ctx.Hover, strings.ToUpper(metric.Name), ctx.Area, g.White)
 
 		color := g.RGB(0.1, 0.1, 0.1)
 		if i%2 == 1 {

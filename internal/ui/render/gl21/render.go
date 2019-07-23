@@ -58,9 +58,25 @@ func List(width, height int, list *draw.List) {
 		}
 		if cmd.Texture == 0 {
 			gl.Disable(gl.TEXTURE_2D)
+			gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 		} else {
+			tex, ok := list.TextureByID[cmd.Texture]
+			if !ok {
+				panic("missing texture")
+			}
+
+			texinfo, ok := tex.GPU[Context{}].(*TextureInfo)
+			if !ok {
+				texinfo = &TextureInfo{}
+				texinfo.Dirty = true
+				tex.GPU[Context{}] = texinfo
+			}
+
+			texinfo.Refresh(tex)
+
 			gl.Enable(gl.TEXTURE_2D)
 			gl.BindTexture(gl.TEXTURE_2D, uint32(cmd.Texture))
+			gl.BlendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
 		}
 
 		x, y, w, h := cmd.Clip.AsInt32()
@@ -68,4 +84,48 @@ func List(width, height int, list *draw.List) {
 		gl.DrawElements(gl.TRIANGLES, int32(cmd.Count), indexType, gl.Ptr(list.Indicies[offset:]))
 		offset += int(cmd.Count)
 	}
+}
+
+type Context struct{}
+
+type TextureInfo struct {
+	ID    uint32
+	Dirty bool
+}
+
+func (ref *TextureInfo) Invalidate() {
+	ref.Dirty = true
+}
+
+func (ref *TextureInfo) Refresh(tex *draw.Texture) {
+	if !ref.Dirty {
+		return
+	}
+	ref.Dirty = false
+
+	if ref.ID == 0 {
+		gl.GenTextures(1, &ref.ID)
+	}
+
+	gl.BindTexture(gl.TEXTURE_2D, ref.ID)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+
+	gl.TexImage2D(
+		gl.TEXTURE_2D,
+		0,
+		gl.RGBA,
+		int32(tex.Image.Rect.Size().X),
+		int32(tex.Image.Rect.Size().Y),
+		0,
+		gl.RGBA,
+		gl.UNSIGNED_BYTE,
+		gl.Ptr(tex.Image.Pix),
+	)
+}
+
+func (ref *TextureInfo) Delete() {
+	// TODO:
 }

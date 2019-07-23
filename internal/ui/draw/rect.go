@@ -13,6 +13,15 @@ func (list *List) FillRect(r *g.Rect, color g.Color) {
 	list.Primitive_Rect(r, color)
 }
 
+func (list *List) RectUV(r *g.Rect, uv *g.Rect, color g.Color) {
+	if color.Transparent() {
+		return
+	}
+
+	list.Primitive_Reserve(6, 4)
+	list.Primitive_RectUV(r, uv, color)
+}
+
 func (list *List) StrokeRect(r *g.Rect, lineWidth float32, color g.Color) {
 	a0, b0, c0, d0 := r.Corners()
 	a1, b1, c1, d1 := r.Deflate(g.Vector{X: lineWidth, Y: lineWidth}).Corners()
