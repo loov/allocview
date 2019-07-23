@@ -59,7 +59,7 @@ func main() {
 		panic(err)
 	}
 
-	DefaultFont, err = draw.LoadTTF("DefaultFont.ttf", 72, 12)
+	DefaultFont, err = draw.LoadTTF("DefaultFont.ttf", 72, 10)
 	if err != nil {
 		panic(err)
 	}
