@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sort"
 	"sync"
 	"time"
 )
@@ -39,6 +40,13 @@ func (metrics *Metrics) Reset() {
 			m.Samples[i].Reset()
 		}
 	}
+}
+
+func (metrics *Metrics) SortByLive() {
+	sort.Slice(metrics.List, func(i, k int) bool {
+		a, b := metrics.List[i], metrics.List[k]
+		return a.Live > b.Live
+	})
 }
 
 func (metrics *Metrics) Update(name string, now time.Time, sample Sample) {
