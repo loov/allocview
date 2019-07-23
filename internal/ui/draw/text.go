@@ -19,8 +19,7 @@ type Font struct {
 	Face    font.Face
 
 	Rendered map[rune]Glyph
-	Atlas    *Texture
-	Image    *image.RGBA
+	Image *image.RGBA
 
 	CursorX       int
 	CursorY       int
