@@ -9,3 +9,5 @@ github.com/loov/vsofont v0.0.0-20190715132218-f9435bd529d2/go.mod h1:1AUVdJWuDjJ
 golang.org/x/image v0.0.0-20190703141733-d6a02ce849c9 h1:uc17S921SPw5F2gJo7slQ3aqvr2RwpL7eb3+DZncu3s=
 golang.org/x/image v0.0.0-20190703141733-d6a02ce849c9/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
+gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce h1:+JknDZhAj8YMt7GC73Ei8pv4MzjDUNPHgQWJdtMAaDU=
+gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce/go.mod h1:5AcXVHNjg+BDxry382+8OKon8SEWiKktQR07RKPsv1c=

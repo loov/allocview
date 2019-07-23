@@ -8,4 +8,5 @@ require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/loov/vsofont v0.0.0-20190715132218-f9435bd529d2
 	golang.org/x/image v0.0.0-20190703141733-d6a02ce849c9
+	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 )

@@ -8,7 +8,7 @@ import (
 	"io"
 	"log"
 	"math/rand"
-	"os"
+	"net"
 	"runtime"
 	"time"
 
@@ -25,10 +25,10 @@ func init() { runtime.LockOSThread() }
 
 func main() {
 	var interval time.Duration
-	flag.DurationVar(&interval, "interval", time.Second, "sampling interval")
+	var input string
 
-	var simulate bool
-	flag.BoolVar(&simulate, "simulate", false, "simulate memory usage")
+	flag.DurationVar(&interval, "interval", time.Second, "sampling interval")
+	flag.StringVar(&input, "input", "allocview", "input")
 
 	flag.Parse()
 
@@ -67,7 +67,8 @@ func main() {
 
 	metrics := NewMetrics(time.Now(), interval, 2<<10)
 
-	if simulate {
+	if input == "simulate" {
+		log.Println("simulating input")
 		go func() {
 			for {
 				for i := 0; i < 10; i++ {
@@ -81,12 +82,18 @@ func main() {
 			}
 		}()
 	} else {
-		go Parse(metrics, os.Stdin)
+		server, err := NewServer(input, func(conn net.Conn) {
+			defer conn.Close()
+			Parse(metrics, conn)
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		go func() {
-			tick := time.NewTicker(interval)
-			for range tick.C {
-				metrics.Update("time", time.Now(), Sample{})
-			}
+			log.Println("listening on ", server.String())
+			err := server.ListenAndServe()
+			log.Println("ListenAndServe", err)
 		}()
 	}
 
