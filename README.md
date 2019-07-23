@@ -4,11 +4,9 @@ allocview analyses `GODEBUG=allocfreetrace=1 ./program` output and prints summar
 
 TODO:
 
-* [ ] rewrite history to remove accidetnally comitted binaries
 * [ ] summary of stack traces
 * [ ] type, summary of stack traces
 * [ ] graph output
-* [ ] multiple draw buffers
 * [ ] text output
 
 # How to use
