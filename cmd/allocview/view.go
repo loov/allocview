@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/loov/allocview/internal/ui"
@@ -58,7 +59,9 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 
 		// TODO: skip hidden rows
 
-		DefaultFont.Draw(ctx.Hover, strings.ToUpper(metric.Name), ctx.Area, g.White)
+		text := strings.ToUpper(metric.Name) + "\n" +
+			fmt.Sprintf("%d bytes", metric.Live)
+		DefaultFont.Draw(ctx.Hover, text, ctx.Area.TopLeft().Add(g.V(0, DefaultFont.LineHeight)), g.White)
 
 		color := g.RGB(0.1, 0.1, 0.1)
 		if i%2 == 1 {

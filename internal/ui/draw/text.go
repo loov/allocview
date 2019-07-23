@@ -158,7 +158,7 @@ func (atlas *Font) LoadGlyphs(text string) {
 	}
 }
 
-func (atlas *Font) Draw(list *List, text string, bounds g.Rect, color g.Color) {
+func (atlas *Font) Draw(list *List, text string, dot g.Vector, color g.Color) {
 	atlas.LoadGlyphs(text)
 
 	textureID := list.IncludeTexture(atlas.Image, atlas.Dirty)
@@ -167,11 +167,18 @@ func (atlas *Font) Draw(list *List, text string, bounds g.Rect, color g.Color) {
 	list.PushTexture(textureID)
 	defer list.PopTexture()
 
-	x := bounds.Min.X + atlas.DrawPadding
-	y := (bounds.Max.Y+bounds.Min.Y)/2 + (ceilPxf(atlas.MaxBounds.Min.Y)+ceilPxf(atlas.MaxBounds.Max.Y))/2
+	x := dot.X + atlas.DrawPadding
+	y := dot.Y
+	// (bounds.Max.Y+bounds.Min.Y)/2 + (ceilPxf(atlas.MaxBounds.Min.Y)+ceilPxf(atlas.MaxBounds.Max.Y))/2
 
 	lastRune := rune(0)
 	for _, r := range text {
+		if r == '\n' {
+			x = dot.X + atlas.DrawPadding
+			y += atlas.LineHeight
+			continue
+		}
+
 		glyph := atlas.Rendered[r]
 
 		dx := float32(glyph.Loc.Dx())

@@ -56,7 +56,7 @@ func (metrics *Metrics) Update(name string, now time.Time, sample Sample) {
 	}
 
 	local := now.Sub(metrics.Since)
-	sampleTime := int(local / metrics.SampleDuration)
+	sampleTime := int(local/metrics.SampleDuration) % metrics.SampleCount
 	if metrics.SampleTime != sampleTime {
 		metrics.SampleTime = sampleTime
 		for _, m := range metrics.List {
