@@ -14,7 +14,8 @@ var (
 type MetricsView struct {
 	Metrics *Metrics
 
-	Scroll float32
+	Scroll       float32
+	TargetScroll float32
 }
 
 func NewMetricsView(metrics *Metrics) *MetricsView {
@@ -52,8 +53,13 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 	}
 	high := low + int(g.Ceil(samples))
 
-	view.Scroll += ctx.Input.Mouse.Scroll.Y
-	top := view.Scroll
+	view.TargetScroll -= ctx.Input.Mouse.Scroll.Y * (MetricHeight + MetricPadding)
+	if view.TargetScroll < 0 {
+		view.TargetScroll = 0
+	}
+	view.Scroll = view.Scroll*0.9 + view.TargetScroll*0.1 // TODO: make time independent
+
+	top := -view.Scroll
 	for i, metric := range metrics.List {
 		top += MetricPadding
 		ctx := ctx.Row(top, top+MetricHeight)
