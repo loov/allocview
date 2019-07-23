@@ -13,13 +13,15 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
+const fontScale = 2
+
 type Font struct {
 	Context *freetype.Context
 	TTF     *truetype.Font
 	Face    font.Face
 
 	Rendered map[rune]Glyph
-	Image *image.RGBA
+	Image    *image.RGBA
 
 	CursorX       int
 	CursorY       int
@@ -75,7 +77,7 @@ func NewTTF(ttf *truetype.Font, dpi, fontSize float64) (*Font, error) {
 	atlas.Context.SetDPI(dpi)
 
 	atlas.Context.SetFont(atlas.TTF)
-	atlas.Context.SetFontSize(fontSize)
+	atlas.Context.SetFontSize(fontSize * fontScale)
 
 	atlas.Context.SetClip(atlas.Image.Bounds())
 	atlas.Context.SetSrc(image.White)
@@ -84,7 +86,7 @@ func NewTTF(ttf *truetype.Font, dpi, fontSize float64) (*Font, error) {
 	atlas.MaxBounds = atlas.TTF.Bounds(fixed.I(int(fontSize)))
 
 	opts := &truetype.Options{}
-	opts.Size = fontSize
+	opts.Size = fontSize * fontScale
 	opts.Hinting = font.HintingFull
 
 	atlas.Face = truetype.NewFace(atlas.TTF, opts)
@@ -198,11 +200,11 @@ func (atlas *Font) forEach(text string, dot0 g.Vector, fn func(g Glyph, r g.Rect
 		glyph := atlas.Rendered[r]
 
 		sz := glyph.Loc.Size()
-		glyphSize := g.V(float32(sz.X), float32(sz.Y))
+		glyphSize := g.V(float32(sz.X)/fontScale, float32(sz.Y)/fontScale)
 
 		topLeft := dot.Add(g.V(
-			ceilPxf(glyph.Bounds.Min.X)-glyphPadding,
-			ceilPxf(glyph.Bounds.Min.Y)-glyphPadding,
+			ceilPxf(glyph.Bounds.Min.X/fontScale)-glyphPadding,
+			ceilPxf(glyph.Bounds.Min.Y/fontScale)-glyphPadding,
 		))
 
 		// this is not the ideal way of positioning the letters
@@ -217,7 +219,7 @@ func (atlas *Font) forEach(text string, dot0 g.Vector, fn func(g Glyph, r g.Rect
 
 		k := atlas.Face.Kern(lastRune, r)
 		lastRune = r
-		dot.X += ceilPxf(glyph.Advance + k)
+		dot.X += ceilPxf(glyph.Advance/fontScale + k/fontScale)
 	}
 }
 
