@@ -1,8 +1,6 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/loov/allocview/internal/ui"
 	"github.com/loov/allocview/internal/ui/g"
 )
@@ -77,7 +75,7 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 			// TODO: skip hidden rows
 			dot := header.Area.TopLeft().Add(g.V(0, DefaultFont.LineHeight))
 
-			text := strings.ToUpper(metric.Name) + "\n" + SizeToString(metric.Live)
+			text := metric.Name + "\n" + SizeToString(metric.Live)
 			header.Hover.FillRect(&header.Area, g.HSLA(0, 0, 0, 0.5))
 			DefaultFont.Draw(header.Hover, text, dot, g.White)
 		}
