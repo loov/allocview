@@ -39,6 +39,7 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 	const MetricPadding = 5
 	const CaptionHeight = 12
 	const SampleWidth = 3
+	const CaptionWidth = CaptionHeight * 6
 
 	samples := ctx.Area.Size().X / SampleWidth
 	// TODO: clamp to max size
@@ -56,16 +57,22 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 		ctx := ctx.Row(top, top+MetricHeight)
 		top += MetricHeight
 
-		// TODO: skip hidden rows
-
-		text := strings.ToUpper(metric.Name) + "\n" + SizeToString(metric.Live)
-		DefaultFont.Draw(ctx.Hover, text, ctx.Area.TopLeft().Add(g.V(0, DefaultFont.LineHeight)), g.White)
-
 		color := g.RGB(0.1, 0.1, 0.1)
 		if i%2 == 1 {
 			color = g.RGB(0.2, 0.2, 0.2)
 		}
 		ctx.Draw.FillRect(&ctx.Area, color)
+
+		{
+			header := ctx.Left(CaptionWidth)
+
+			// TODO: skip hidden rows
+			dot := header.Area.TopLeft().Add(g.V(0, DefaultFont.LineHeight))
+
+			text := strings.ToUpper(metric.Name) + "\n" + SizeToString(metric.Live)
+			header.Hover.FillRect(&header.Area, g.HSLA(0, 0, 0, 0.5))
+			DefaultFont.Draw(header.Hover, text, dot, g.White)
+		}
 
 		max := metric.Max()
 		maxValue := Max(max.Allocs, max.Frees)

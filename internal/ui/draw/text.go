@@ -158,7 +158,7 @@ func (atlas *Font) LoadGlyphs(text string) {
 	}
 }
 
-func (atlas *Font) Draw(list *List, text string, dot g.Vector, color g.Color) {
+func (atlas *Font) Draw(list *List, text string, dot0 g.Vector, color g.Color) {
 	atlas.LoadGlyphs(text)
 
 	textureID := list.IncludeTexture(atlas.Image, atlas.Dirty)
@@ -167,43 +167,58 @@ func (atlas *Font) Draw(list *List, text string, dot g.Vector, color g.Color) {
 	list.PushTexture(textureID)
 	defer list.PopTexture()
 
-	x := dot.X + atlas.DrawPadding
-	y := dot.Y
-	// (bounds.Max.Y+bounds.Min.Y)/2 + (ceilPxf(atlas.MaxBounds.Min.Y)+ceilPxf(atlas.MaxBounds.Max.Y))/2
+	atlas.forEach(text, dot0, func(glyph Glyph, rect g.Rect) {
+		list.RectUV(
+			&rect,
+			&glyph.RelLoc,
+			color,
+		)
+	})
+}
 
+func (atlas *Font) Measure(text string) g.Rect {
+	b := g.Rect{}
+
+	atlas.forEach(text, g.V0, func(g Glyph, r g.Rect) {
+		b = b.Union(r)
+	})
+
+	return b
+}
+
+func (atlas *Font) forEach(text string, dot0 g.Vector, fn func(g Glyph, r g.Rect)) {
+	dot := g.V(dot0.X+atlas.DrawPadding, dot0.Y)
 	lastRune := rune(0)
 	for _, r := range text {
 		if r == '\n' {
-			x = dot.X + atlas.DrawPadding
-			y += atlas.LineHeight
+			dot.X = dot0.X + atlas.DrawPadding
+			dot.Y += atlas.LineHeight
 			continue
 		}
 
 		glyph := atlas.Rendered[r]
 
-		dx := float32(glyph.Loc.Dx())
-		dy := float32(glyph.Loc.Dy())
+		sz := glyph.Loc.Size()
+		glyphSize := g.V(float32(sz.X), float32(sz.Y))
 
-		px := x + ceilPxf(glyph.Bounds.Min.X) - glyphPadding
-		py := y + ceilPxf(glyph.Bounds.Min.Y) - glyphPadding
+		topLeft := dot.Add(g.V(
+			ceilPxf(glyph.Bounds.Min.X)-glyphPadding,
+			ceilPxf(glyph.Bounds.Min.Y)-glyphPadding,
+		))
 
 		// this is not the ideal way of positioning the letters
 		// will create positioning artifacts
-		px = float32(math.Trunc(float64(px)))
-		py = float32(math.Trunc(float64(py)))
+		topLeft.X = float32(math.Trunc(float64(topLeft.X)))
+		topLeft.Y = float32(math.Trunc(float64(topLeft.Y)))
 
-		list.RectUV(
-			&g.Rect{
-				Min: g.V(px, py),
-				Max: g.V(px+dx, py+dy),
-			},
-			&glyph.RelLoc,
-			color,
-		)
+		fn(glyph, g.Rect{
+			Min: topLeft,
+			Max: topLeft.Add(glyphSize),
+		})
 
 		k := atlas.Face.Kern(lastRune, r)
 		lastRune = r
-		x += ceilPxf(glyph.Advance + k)
+		dot.X += ceilPxf(glyph.Advance + k)
 	}
 }
 
