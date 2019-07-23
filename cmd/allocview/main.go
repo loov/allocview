@@ -14,8 +14,12 @@ import (
 
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
+
+	"github.com/loov/allocview/internal/ui/draw"
 	"github.com/loov/allocview/trace"
 )
+
+var DefaultFont *draw.Font
 
 func init() { runtime.LockOSThread() }
 
@@ -54,6 +58,12 @@ func main() {
 	if err := gl.GetError(); err != 0 {
 		panic(err)
 	}
+
+	DefaultFont, err = draw.LoadTTF("DefaultFont.ttf", 72, 12)
+	if err != nil {
+		panic(err)
+	}
+	DefaultFont.LoadExtendedAscii()
 
 	metrics := NewMetrics(time.Now(), interval, 2<<10)
 

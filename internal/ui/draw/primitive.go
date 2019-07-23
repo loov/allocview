@@ -3,6 +3,16 @@ package draw
 import "github.com/loov/allocview/internal/ui/g"
 
 func (list *List) BeginCommand() {
+	if list.CurrentCommand != nil &&
+		list.CurrentCommand.Count == 0 &&
+		list.CurrentCommand.Callback == nil {
+		*list.CurrentCommand = Command{
+			Clip:    list.CurrentClip,
+			Texture: list.CurrentTexture,
+		}
+		return
+	}
+
 	list.Commands = append(list.Commands, Command{
 		Clip:    list.CurrentClip,
 		Texture: list.CurrentTexture,
