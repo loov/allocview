@@ -35,6 +35,8 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 	metrics.Lock()
 	defer metrics.Unlock()
 
+	metrics.SortByLive()
+
 	const MetricHeight = 50
 	const MetricPadding = 5
 	const CaptionHeight = 12
