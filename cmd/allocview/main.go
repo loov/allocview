@@ -39,7 +39,7 @@ func main() {
 
 	glfw.WindowHint(glfw.Resizable, glfw.True)
 	// glfw.WindowHint(glfw.Visible, glfw.False) // do not steal focus
-	glfw.WindowHint(glfw.Samples, 2)
+	// glfw.WindowHint(glfw.Samples, 2)
 
 	glfw.WindowHint(glfw.ContextVersionMajor, 2)
 	glfw.WindowHint(glfw.ContextVersionMinor, 1)
@@ -59,7 +59,7 @@ func main() {
 		panic(err)
 	}
 
-	DefaultFont, err = draw.LoadTTF("DefaultFont.ttf", 72, 10)
+	DefaultFont, err = draw.LoadTTF("DefaultFont.ttf", 72, 32)
 	if err != nil {
 		panic(err)
 	}

@@ -73,11 +73,11 @@ func (view *MetricsView) Update(ctx *ui.Context) {
 			header := ctx.Left(CaptionWidth)
 
 			// TODO: skip hidden rows
-			dot := header.Area.TopLeft().Add(g.V(0, DefaultFont.LineHeight))
+			dot := header.Area.TopLeft().Add(g.V(0, CaptionHeight))
 
 			text := metric.Name + "\n" + SizeToString(metric.Live)
 			header.Hover.FillRect(&header.Area, g.HSLA(0, 0, 0, 0.5))
-			DefaultFont.Draw(header.Hover, text, dot, g.White)
+			DefaultFont.Draw(header.Hover, text, CaptionHeight-2, dot, g.White)
 		}
 
 		max := metric.Max()

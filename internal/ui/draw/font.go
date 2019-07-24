@@ -13,8 +13,6 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-const fontScale = 2
-
 type Font struct {
 	Context *freetype.Context
 	TTF     *truetype.Font
@@ -28,8 +26,9 @@ type Font struct {
 	MaxGlyphInRow int
 	DrawPadding   float32
 
-	MaxBounds  fixed.Rectangle26_6
-	LineHeight float32
+	MaxBounds   fixed.Rectangle26_6
+	MaxFontSize float32
+	LineHeight  float32
 
 	Dirty bool
 }
@@ -47,7 +46,7 @@ const (
 	glyphPadding = 1
 )
 
-func LoadTTF(filename string, dpi, fontSize float64) (*Font, error) {
+func LoadTTF(filename string, dpi, maxFontSize float64) (*Font, error) {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -58,18 +57,19 @@ func LoadTTF(filename string, dpi, fontSize float64) (*Font, error) {
 		return nil, err
 	}
 
-	return NewTTF(ttf, dpi, fontSize)
+	return NewTTF(ttf, dpi, maxFontSize)
 }
 
-func NewTTF(ttf *truetype.Font, dpi, fontSize float64) (*Font, error) {
+func NewTTF(ttf *truetype.Font, dpi, maxFontSize float64) (*Font, error) {
 	atlas := &Font{}
 
 	atlas.TTF = ttf
 
 	atlas.Rendered = make(map[rune]Glyph, 256)
 
-	atlas.DrawPadding = float32(fontSize * 0.5)
-	atlas.LineHeight = float32(fontSize * 1.2)
+	atlas.MaxFontSize = float32(maxFontSize)
+	atlas.DrawPadding = float32(maxFontSize * 0.5)
+	atlas.LineHeight = float32(maxFontSize * 1.2)
 
 	atlas.Image = image.NewRGBA(image.Rect(0, 0, 1024, 1024))
 
@@ -77,30 +77,20 @@ func NewTTF(ttf *truetype.Font, dpi, fontSize float64) (*Font, error) {
 	atlas.Context.SetDPI(dpi)
 
 	atlas.Context.SetFont(atlas.TTF)
-	atlas.Context.SetFontSize(fontSize * fontScale)
+	atlas.Context.SetFontSize(maxFontSize)
 
 	atlas.Context.SetClip(atlas.Image.Bounds())
 	atlas.Context.SetSrc(image.White)
 	atlas.Context.SetDst(atlas.Image)
 
-	atlas.MaxBounds = atlas.TTF.Bounds(fixed.I(int(fontSize)))
+	atlas.MaxBounds = atlas.TTF.Bounds(fixed.I(int(maxFontSize)))
 
 	opts := &truetype.Options{}
-	opts.Size = fontSize * fontScale
+	opts.Size = maxFontSize
 	opts.Hinting = font.HintingFull
 
 	atlas.Face = truetype.NewFace(atlas.TTF, opts)
 	return atlas, nil
-}
-
-func ceilPx(i fixed.Int26_6) int {
-	const ceiling = 1<<6 - 1
-	return int(i+ceiling) >> 6
-}
-
-func ceilPxf(i fixed.Int26_6) float32 {
-	const div = 1 << 6
-	return float32(i) / div
 }
 
 func (atlas *Font) loadGlyph(r rune) {
@@ -159,7 +149,7 @@ func (atlas *Font) LoadGlyphs(text string) {
 	}
 }
 
-func (atlas *Font) Draw(list *List, text string, dot0 g.Vector, color g.Color) {
+func (atlas *Font) Draw(list *List, text string, fontSize float32, dot0 g.Vector, color g.Color) {
 	atlas.LoadGlyphs(text)
 
 	textureID := list.IncludeTexture(atlas.Image, atlas.Dirty)
@@ -168,7 +158,7 @@ func (atlas *Font) Draw(list *List, text string, dot0 g.Vector, color g.Color) {
 	list.PushTexture(textureID)
 	defer list.PopTexture()
 
-	atlas.forEach(text, dot0, func(glyph Glyph, rect g.Rect) {
+	atlas.forEach(text, fontSize, dot0, func(glyph Glyph, rect g.Rect) {
 		list.RectUV(
 			&rect,
 			&glyph.RelLoc,
@@ -177,34 +167,37 @@ func (atlas *Font) Draw(list *List, text string, dot0 g.Vector, color g.Color) {
 	})
 }
 
-func (atlas *Font) Measure(text string) g.Rect {
+func (atlas *Font) Measure(text string, fontSize float32) g.Rect {
 	b := g.Rect{}
 
-	atlas.forEach(text, g.V0, func(g Glyph, r g.Rect) {
+	atlas.forEach(text, fontSize, g.V0, func(g Glyph, r g.Rect) {
 		b = b.Union(r)
 	})
 
 	return b
 }
 
-func (atlas *Font) forEach(text string, dot0 g.Vector, fn func(g Glyph, r g.Rect)) {
-	dot := g.V(dot0.X+atlas.DrawPadding, dot0.Y)
+func (atlas *Font) forEach(text string, fontSize float32, dot0 g.Vector, fn func(g Glyph, r g.Rect)) {
+	dot := g.V(dot0.X, dot0.Y)
 	lastRune := rune(0)
+
+	scaling := fontSize / atlas.MaxFontSize
+
 	for _, r := range text {
 		if r == '\n' {
-			dot.X = dot0.X + atlas.DrawPadding
-			dot.Y += atlas.LineHeight
+			dot.X = dot0.X
+			dot.Y += atlas.LineHeight * scaling
 			continue
 		}
 
 		glyph := atlas.Rendered[r]
 
 		sz := glyph.Loc.Size()
-		glyphSize := g.V(float32(sz.X)/fontScale, float32(sz.Y)/fontScale)
+		glyphSize := g.V(float32(sz.X)*scaling, float32(sz.Y)*scaling)
 
 		topLeft := dot.Add(g.V(
-			ceilPxf(glyph.Bounds.Min.X/fontScale)-glyphPadding,
-			ceilPxf(glyph.Bounds.Min.Y/fontScale)-glyphPadding,
+			ceilPxf(glyph.Bounds.Min.X)*scaling-glyphPadding,
+			ceilPxf(glyph.Bounds.Min.Y)*scaling-glyphPadding,
 		))
 
 		// this is not the ideal way of positioning the letters
@@ -219,7 +212,7 @@ func (atlas *Font) forEach(text string, dot0 g.Vector, fn func(g Glyph, r g.Rect
 
 		k := atlas.Face.Kern(lastRune, r)
 		lastRune = r
-		dot.X += ceilPxf(glyph.Advance/fontScale + k/fontScale)
+		dot.X += ceilPxf(glyph.Advance+k) * scaling
 	}
 }
 
@@ -229,4 +222,14 @@ func RelBounds(r, b image.Rectangle) (n g.Rect) {
 	n.Max.X = float32(r.Max.X-b.Min.X) / float32(b.Dx())
 	n.Max.Y = float32(r.Max.Y-b.Min.Y) / float32(b.Dy())
 	return n
+}
+
+func ceilPx(i fixed.Int26_6) int {
+	const ceiling = 1<<6 - 1
+	return int(i+ceiling) >> 6
+}
+
+func ceilPxf(i fixed.Int26_6) float32 {
+	const div = 1 << 6
+	return float32(i) / div
 }
