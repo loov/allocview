@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -81,7 +78,30 @@ func main() {
 			}
 		}()
 	} else {
-		go Parse(metrics, os.Stdin)
+		go func() {
+			reader := trace.NewReader(os.Stdin)
+			for {
+				event, err := reader.Read()
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				now := time.Now()
+
+				switch event.Kind {
+				case trace.Alloc:
+					metrics.Update(event.Type, now, Sample{
+						Allocs: event.Size,
+					})
+				case trace.Free:
+					metrics.Update(event.Type, now, Sample{
+						Frees: event.Size,
+					})
+				}
+			}
+		}()
+
 		go func() {
 			tick := time.NewTicker(interval)
 			for range tick.C {
@@ -93,43 +113,4 @@ func main() {
 	view := NewMetricsView(metrics)
 	app := NewApp(window, view)
 	app.Run()
-}
-
-func Parse(metrics *Metrics, in io.Reader) {
-	scanner := bufio.NewScanner(in)
-	scanner.Split(SplitStack)
-
-	for scanner.Scan() {
-		blocktext := scanner.Text()
-		event, ok := trace.ParseEvent(blocktext)
-		if !ok {
-			continue
-		}
-
-		now := time.Now()
-
-		switch event.Kind {
-		case trace.Alloc:
-			metrics.Update(event.Type, now, Sample{
-				Allocs: event.Size,
-			})
-		case trace.Free:
-			metrics.Update(event.Type, now, Sample{
-				Frees: event.Size,
-			})
-		}
-	}
-}
-
-func SplitStack(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-	if i := bytes.Index(data, []byte{'\n', '\n'}); i >= 0 {
-		return i + 2, data[:i], nil
-	}
-	if atEOF {
-		return len(data), data, nil
-	}
-	return 0, nil, nil
 }
