@@ -6,21 +6,21 @@ import (
 
 type Textures struct {
 	TextureByID      map[TextureID]*Texture
-	TextureByPointer map[*image.RGBA]*Texture
+	TextureByPointer map[*image.NRGBA]*Texture
 	NextTextureID    TextureID
 }
 
 func NewTextures() *Textures {
 	return &Textures{
 		TextureByID:      map[TextureID]*Texture{},
-		TextureByPointer: map[*image.RGBA]*Texture{},
+		TextureByPointer: map[*image.NRGBA]*Texture{},
 		NextTextureID:    1,
 	}
 }
 
 type Texture struct {
 	ID    TextureID
-	Image *image.RGBA
+	Image *image.NRGBA
 	GPU   map[DriverTag]DriverInfo
 }
 
@@ -31,7 +31,7 @@ type DriverInfo interface {
 	Invalidate()
 }
 
-func (textures *Textures) IncludeTexture(m *image.RGBA, dirty bool) TextureID {
+func (textures *Textures) IncludeTexture(m *image.NRGBA, dirty bool) TextureID {
 	tex, ok := textures.TextureByPointer[m]
 	if !ok {
 		tex = NewTexture(m)
@@ -49,7 +49,7 @@ func (textures *Textures) IncludeTexture(m *image.RGBA, dirty bool) TextureID {
 	return tex.ID
 }
 
-func NewTexture(m *image.RGBA) *Texture {
+func NewTexture(m *image.NRGBA) *Texture {
 	return &Texture{
 		Image: m,
 		GPU:   map[DriverTag]DriverInfo{},

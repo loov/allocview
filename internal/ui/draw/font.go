@@ -19,7 +19,7 @@ type Font struct {
 	Face    font.Face
 
 	Rendered map[rune]Glyph
-	Image    *image.RGBA
+	Image    *image.NRGBA
 
 	CursorX       int
 	CursorY       int
@@ -71,7 +71,7 @@ func NewTTF(ttf *truetype.Font, dpi, maxFontSize float64) (*Font, error) {
 	atlas.DrawPadding = float32(maxFontSize * 0.5)
 	atlas.LineHeight = float32(maxFontSize * 1.2)
 
-	atlas.Image = image.NewRGBA(image.Rect(0, 0, 1024, 1024))
+	atlas.Image = image.NewNRGBA(image.Rect(0, 0, 1024, 1024))
 
 	atlas.Context = freetype.NewContext()
 	atlas.Context.SetDPI(dpi)

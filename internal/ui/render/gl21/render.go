@@ -58,7 +58,6 @@ func List(width, height int, list *draw.List) {
 		}
 		if cmd.Texture == 0 {
 			gl.Disable(gl.TEXTURE_2D)
-			gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 		} else {
 			tex, ok := list.TextureByID[cmd.Texture]
 			if !ok {
@@ -76,7 +75,6 @@ func List(width, height int, list *draw.List) {
 
 			gl.Enable(gl.TEXTURE_2D)
 			gl.BindTexture(gl.TEXTURE_2D, uint32(cmd.Texture))
-			gl.BlendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
 		}
 
 		x, y, w, h := cmd.Clip.AsInt32()
