@@ -13,6 +13,9 @@ type Reader struct {
 
 func NewReader(input io.Reader) *Reader {
 	scanner := bufio.NewScanner(input)
+
+	buffer := make([]byte, 10<<20)
+	scanner.Buffer(buffer, 1<<20)
 	scanner.Split(splitStack)
 
 	return &Reader{
