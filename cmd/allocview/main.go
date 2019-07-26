@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
+	"golang.org/x/image/font/gofont/gomono"
 
 	"github.com/loov/allocview/internal/ui/draw"
 	"github.com/loov/allocview/trace"
@@ -72,7 +73,7 @@ func main() {
 		panic(err)
 	}
 
-	DefaultFont, err = draw.LoadTTF("DefaultFont.ttf", 72, 32)
+	DefaultFont, err = draw.ParseTTF(gomono.TTF, 72, 20)
 	if err != nil {
 		panic(err)
 	}

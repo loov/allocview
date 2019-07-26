@@ -52,7 +52,11 @@ func LoadTTF(filename string, dpi, maxFontSize float64) (*Font, error) {
 		return nil, err
 	}
 
-	ttf, err := truetype.Parse(content)
+	return ParseTTF(content, dpi, maxFontSize)
+}
+
+func ParseTTF(data []byte, dpi, maxFontSize float64) (*Font, error) {
+	ttf, err := truetype.Parse(data)
 	if err != nil {
 		return nil, err
 	}
