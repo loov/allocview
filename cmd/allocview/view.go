@@ -27,6 +27,12 @@ func (view *MetricsView) Reset() {
 }
 
 func (view *MetricsView) Update(ctx *ui.Context) {
+	menuctx := ctx.Top(16)
+	menuctx.Left(100).Button(DefaultFont, "hello")
+	_ = menuctx
+
+	ctx.PushClip()
+	defer ctx.PopClip()
 	ctx.Draw.FillRect(&ctx.Area, BackgroundColor)
 
 	metrics := view.Metrics

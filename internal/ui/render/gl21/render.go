@@ -6,6 +6,7 @@ import (
 	"github.com/go-gl/gl/v2.1/gl"
 
 	"github.com/loov/allocview/internal/ui/draw"
+	"github.com/loov/allocview/internal/ui/g"
 )
 
 var (
@@ -27,10 +28,13 @@ func init() {
 	}
 }
 
-func List(width, height int, list *draw.List) {
+func List(windowSize, framebufferSize g.Vector, list *draw.List) {
 	if list.Empty() {
 		return
 	}
+
+	height := int(framebufferSize.Y)
+	scale := framebufferSize.Div(windowSize)
 
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
@@ -77,7 +81,7 @@ func List(width, height int, list *draw.List) {
 			gl.BindTexture(gl.TEXTURE_2D, uint32(cmd.Texture))
 		}
 
-		x, y, w, h := cmd.Clip.AsInt32()
+		x, y, w, h := cmd.Clip.Mul(scale).AsInt32()
 		gl.Scissor(x, int32(height)-y-h, w, h)
 		gl.DrawElements(gl.TRIANGLES, int32(cmd.Count), indexType, gl.Ptr(list.Indicies[offset:]))
 		offset += int(cmd.Count)

@@ -57,6 +57,13 @@ func (r Rect) Clip(clip Rect) {
 	}
 }
 
+func (r Rect) Mul(s Vector) Rect {
+	return Rect{
+		Min: r.Min.Mul(s),
+		Max: r.Max.Mul(s),
+	}
+}
+
 func (r Rect) Floor() {
 	r.Min.X = (float32)((int)(r.Min.X))
 	r.Min.Y = (float32)((int)(r.Min.Y))

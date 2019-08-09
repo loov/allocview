@@ -74,6 +74,9 @@ func (app *App) UpdateFrame() {
 	w, h := app.Window.GetSize()
 	x, y := app.Window.GetCursorPos()
 
+	framebufferSize := g.Vector{float32(fw), float32(fh)}
+	windowSize := g.Vector{float32(w), float32(h)}
+
 	app.Context.Input.Mouse.Pos = g.Vector{float32(x), float32(y)}
 	app.Context.Input.Mouse.Down = app.Window.GetMouseButton(glfw.MouseButtonLeft) == glfw.Press
 
@@ -103,7 +106,7 @@ func (app *App) UpdateFrame() {
 	}
 
 	for _, list := range app.Context.Layers.Frame.Lists {
-		render.List(w, h, list)
+		render.List(windowSize, framebufferSize, list)
 	}
 }
 
