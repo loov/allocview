@@ -6,7 +6,14 @@ import (
 )
 
 var (
+	MenuColor       = g.Color{0x80, 0x80, 0x80, 0xFF}
 	BackgroundColor = g.Color{0, 0, 0, 0xFF}
+
+	ButtonTheme = &ui.ButtonTheme{
+		Color: g.Color{0x10, 0x10, 0x10, 0xFF},
+		Hot:   g.Color{0x20, 0x20, 0x20, 0xFF},
+		Text:  g.Color{0xFF, 0xFF, 0xFF, 0xFF},
+	}
 )
 
 type MetricsView struct {
@@ -28,10 +35,13 @@ func (view *MetricsView) Reset() {
 
 func (view *MetricsView) Update(ctx *ui.Context) {
 	menuctx := ctx.Top(16)
+	menuctx.Draw.FillRect(&menuctx.Area, MenuColor)
+
 	ui.Button{
 		Layer: menuctx.Hover,
 		Font:  DefaultFont,
 		Text:  "Hello",
+		Theme: ButtonTheme,
 	}.Do(menuctx.Left(100))
 	_ = menuctx
 
