@@ -28,7 +28,11 @@ func (view *MetricsView) Reset() {
 
 func (view *MetricsView) Update(ctx *ui.Context) {
 	menuctx := ctx.Top(16)
-	menuctx.Left(100).Button(DefaultFont, "hello")
+	ui.Button{
+		Layer: menuctx.Hover,
+		Font:  DefaultFont,
+		Text:  "Hello",
+	}.Do(menuctx.Left(100))
 	_ = menuctx
 
 	ctx.PushClip()

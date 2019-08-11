@@ -5,14 +5,20 @@ import (
 	"github.com/loov/allocview/internal/ui/g"
 )
 
-func (ctx *Context) Button(font *draw.Font, text string) bool {
+type Button struct {
+	Layer *draw.List
+	Font  *draw.Font
+	Text  string
+}
+
+func (button Button) Do(ctx *Context) bool {
 	color := g.Green
 	if ctx.Area.Contains(ctx.Input.Mouse.Pos) {
 		color = g.Blue
 	}
 
 	ctx.Draw.FillRect(&ctx.Area, color)
-	font.Draw(ctx.Draw, text, 10, ctx.Area.BottomLeft(), g.Black)
+	button.Font.Draw(ctx.Draw, button.Text, 10, ctx.Area.BottomLeft(), g.Black)
 
 	return false
 }

@@ -346,7 +346,7 @@ func (r {{.Rect}}) Canon() {{.Rect}} {
 
 // Contains returns whether p is fully contained in rect
 func (r {{.Rect}}) Contains(p {{.Vec}}) bool {
-	return r.Min.Lt(p) && p.Lt(r.Max)
+	return r.Min.Lt(p) && p.Le(r.Max)
 }
 // Inflate increases size by 2*p
 func (r {{.Rect}}) Inflate(p {{.Vec}}) {{.Rect}} {
