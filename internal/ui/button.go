@@ -13,9 +13,10 @@ type Button struct {
 }
 
 type ButtonTheme struct {
-	Color g.Color
-	Hot   g.Color
-	Text  g.Color
+	Color  g.Color
+	Hot    g.Color
+	Active g.Color
+	Text   g.Color
 }
 
 func (button Button) Do(ctx *Context) bool {
@@ -23,13 +24,16 @@ func (button Button) Do(ctx *Context) bool {
 	color := button.Theme.Color
 	if ctx.Area.Contains(ctx.Input.Mouse.Pos) {
 		color = button.Theme.Hot
+		if ctx.Input.Mouse.Down {
+			color = button.Theme.Active
+		}
 		if ctx.Input.Mouse.Released {
 			clicked = true
 		}
 	}
 
 	ctx.Draw.FillRect(&ctx.Area, color)
-	button.Font.Draw(ctx.Draw, button.Text, 10, ctx.Area.BottomLeft(), button.Theme.Text)
+	button.Font.Draw(button.Layer, button.Text, 10, ctx.Area.BottomLeft(), button.Theme.Text)
 
 	return clicked
 }
