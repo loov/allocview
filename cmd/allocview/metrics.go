@@ -17,6 +17,8 @@ type Metrics struct {
 
 	ByName map[string]*Metric
 	List   []*Metric
+
+	Updated chan struct{}
 }
 
 func NewMetrics(since time.Time, sampleDuration time.Duration, sampleCount int) *Metrics {
@@ -28,10 +30,21 @@ func NewMetrics(since time.Time, sampleDuration time.Duration, sampleCount int) 
 		SampleTime:     0,
 
 		ByName: make(map[string]*Metric),
+
+		Updated: make(chan struct{}),
+	}
+}
+
+func (metrics *Metrics) Notify() {
+	select {
+	case metrics.Updated <- struct{}{}:
+	default:
 	}
 }
 
 func (metrics *Metrics) Reset() {
+	defer metrics.Notify()
+
 	metrics.Lock()
 	defer metrics.Unlock()
 
@@ -50,6 +63,8 @@ func (metrics *Metrics) SortByLive() {
 }
 
 func (metrics *Metrics) Update(name string, now time.Time, sample Sample) {
+	defer metrics.Notify()
+
 	metrics.Lock()
 	defer metrics.Unlock()
 

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -10,15 +11,13 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/go-gl/gl/v2.1/gl"
-	"github.com/go-gl/glfw/v3.2/glfw"
-	"golang.org/x/image/font/gofont/gomono"
+	"gioui.org/app"
+	"gioui.org/font/gofont"
+	"gioui.org/unit"
+	"golang.org/x/sync/errgroup"
 
-	"github.com/loov/allocview/internal/ui/draw"
 	"github.com/loov/allocview/trace"
 )
-
-var DefaultFont *draw.Font
 
 func init() { runtime.LockOSThread() }
 
@@ -46,91 +45,30 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	if err := glfw.Init(); err != nil {
-		log.Fatalln("failed to initialize glfw:", err)
-	}
-	defer glfw.Terminate()
-
-	glfw.WindowHint(glfw.Resizable, glfw.True)
-	// glfw.WindowHint(glfw.Visible, glfw.False) // do not steal focus
-	// glfw.WindowHint(glfw.Samples, 2)
-
-	glfw.WindowHint(glfw.ContextVersionMajor, 2)
-	glfw.WindowHint(glfw.ContextVersionMinor, 1)
-
-	window, err := glfw.CreateWindow(800, 600, "AllocView", nil, nil)
-	if err != nil {
-		panic(err)
-	}
-	window.MakeContextCurrent()
-	window.Restore()
-	window.SetPos(32, 64)
-
-	if err := gl.Init(); err != nil {
-		panic(err)
-	}
-	if err := gl.GetError(); err != 0 {
-		panic(err)
-	}
-
-	DefaultFont, err = draw.ParseTTF(gomono.TTF, 72, 20)
-	if err != nil {
-		panic(err)
-	}
-	DefaultFont.LoadExtendedAscii()
+	gofont.Register()
 
 	metrics := NewMetrics(time.Now(), interval, 2<<10)
 
+	var group errgroup.Group
 	if simulate {
-		go func() {
-			for {
-				for i := 0; i < 10; i++ {
-					span := fmt.Sprintf("trace %d", i)
-					metrics.Update(span, time.Now(), Sample{
-						Allocs: 100 + rand.Int63n(10000),
-						Frees:  100 + rand.Int63n(10000),
-					})
-					time.Sleep(10 * time.Millisecond)
-				}
-			}
-		}()
+		group.Go(func() error { return ReadSim(metrics) })
 	} else {
-		go func() {
-			reader := trace.NewReader(os.Stdin)
-			for {
-				event, err := reader.Read()
-				if err != nil {
-					log.Println(err)
-					return
-				}
-
-				now := time.Now()
-
-				switch event.Kind {
-				case trace.Alloc:
-					metrics.Update(event.Type, now, Sample{
-						Allocs: event.Size,
-					})
-				case trace.Free:
-					metrics.Update(event.Type, now, Sample{
-						Frees: event.Size,
-					})
-				}
-			}
-		}()
-
-		go func() {
-			tick := time.NewTicker(interval)
-			for range tick.C {
-				metrics.Update("time", time.Now(), Sample{})
-			}
-		}()
+		group.Go(func() error { return ReadInput(metrics, os.Stdin) })
+		group.Go(func() error { return RegularUpdates(metrics, interval) })
 	}
 
-	view := NewMetricsView(metrics)
-	app := NewApp(window, view)
-	app.Run()
-	defer runtime.KeepAlive(app)
+	group.Go(func() error {
+		window := app.NewWindow(app.Size(unit.Dp(800), unit.Dp(650)))
+		view := NewMetricsView(metrics)
+		return view.Run(window)
+	})
+
+	app.Main()
+
+	err := group.Wait()
+	if err != nil {
+		log.Println(err)
+	}
 
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)
@@ -143,4 +81,48 @@ func main() {
 			log.Fatal("could not write memory profile: ", err)
 		}
 	}
+}
+
+func ReadSim(metrics *Metrics) error {
+	for {
+		for i := 0; i < 10; i++ {
+			span := fmt.Sprintf("trace %d", i)
+			metrics.Update(span, time.Now(), Sample{
+				Allocs: 100 + rand.Int63n(10000),
+				Frees:  100 + rand.Int63n(10000),
+			})
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+}
+
+func ReadInput(metrics *Metrics, r io.Reader) error {
+	reader := trace.NewReader(os.Stdin)
+	for {
+		event, err := reader.Read()
+		if err != nil {
+			return err
+		}
+
+		now := time.Now()
+
+		switch event.Kind {
+		case trace.Alloc:
+			metrics.Update(event.Type, now, Sample{
+				Allocs: event.Size,
+			})
+		case trace.Free:
+			metrics.Update(event.Type, now, Sample{
+				Frees: event.Size,
+			})
+		}
+	}
+}
+
+func RegularUpdates(metrics *Metrics, interval time.Duration) error {
+	tick := time.NewTicker(interval)
+	for range tick.C {
+		metrics.Update("time", time.Now(), Sample{})
+	}
+	return nil
 }
