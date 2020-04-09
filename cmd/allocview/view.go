@@ -3,24 +3,32 @@ package main
 import (
 	"image"
 	"image/color"
+	"math"
 
 	"gioui.org/app"
 	"gioui.org/f32"
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op/paint"
+	"gioui.org/unit"
 	"gioui.org/widget/material"
 )
 
 var (
-	BackgroundColor = color.RGBA{0x00, 0x00, 0x00, 0xFF}
+	BackgroundColor    = color.RGBA{0x00, 0x00, 0x00, 0xFF}
+	RowBackgroundEven  = color.RGBA{0x11, 0x11, 0x11, 0xFF}
+	RowBackgroundEvenH = color.RGBA{0x18, 0x18, 0x18, 0xFF}
+	RowBackgroundOdd   = color.RGBA{0x22, 0x22, 0x22, 0xFF}
+	RowBackgroundOddH  = color.RGBA{0x28, 0x28, 0x28, 0xFF}
+	TextColor          = color.RGBA{0xFF, 0xFF, 0xFF, 0xFF}
 )
+
+func selectColor(i int, values ...color.RGBA) color.RGBA {
+	return values[i%len(values)]
+}
 
 type MetricsView struct {
 	Metrics *Metrics
-
-	Scroll       float32
-	TargetScroll float32
 }
 
 func NewMetricsView(metrics *Metrics) *MetricsView {
@@ -60,8 +68,18 @@ func (view *MetricsView) Run(w *app.Window) error {
 	}
 }
 
+const (
+	MetricHeight  = 50
+	MetricPadding = 5
+	CaptionHeight = 12
+	SampleWidth   = 3
+	CaptionWidth  = CaptionHeight * 10
+)
+
+func ceil(v float32) float32 { return float32(math.Ceil(float64(v))) }
+
 func (view *MetricsView) Update(gtx *layout.Context, th *material.Theme) {
-	Fill(gtx, BackgroundColor)
+	Fill{Color: BackgroundColor}.Layout(gtx)
 
 	metrics := view.Metrics
 
@@ -70,100 +88,122 @@ func (view *MetricsView) Update(gtx *layout.Context, th *material.Theme) {
 
 	metrics.SortByLive()
 
-	/*
-		const MetricHeight = 50
-		const MetricPadding = 5
-		const CaptionHeight = 12
-		const SampleWidth = 3
-		const CaptionWidth = CaptionHeight * 6
+	inset := layout.Inset{Bottom: unit.Dp(MetricPadding)}
 
-		samples := ctx.Area.Size().X / SampleWidth
-		// TODO: clamp to max size
+	list := layout.List{Axis: layout.Vertical}
+	list.Layout(gtx, len(metrics.List), func(i int) {
+		inset.Layout(gtx, func() {
+			gtx.Constraints.Height.Min = gtx.Px(unit.Dp(MetricHeight))
+			gtx.Constraints.Height.Max = gtx.Constraints.Height.Min
 
-		low := int(float32(metrics.SampleTime) - samples)
-		if low < 0 {
-			low = 0
-		}
-		high := low + int(g.Ceil(samples))
+			metric := metrics.List[i]
 
-		view.TargetScroll -= ctx.Input.Mouse.Scroll.Y * (MetricHeight + MetricPadding)
-		if view.TargetScroll < 0 {
-			view.TargetScroll = 0
-		}
-		view.Scroll = view.Scroll*0.9 + view.TargetScroll*0.1 // TODO: make time independent
+			layout.Flex{}.Layout(gtx,
+				layout.Rigid(func() {
+					gtx.Constraints.Width.Min, gtx.Constraints.Width.Max = CaptionWidth, CaptionWidth
+					Fill{Color: selectColor(i, RowBackgroundEvenH, RowBackgroundOddH)}.Layout(gtx)
 
-		top := -view.Scroll
-		for i, metric := range metrics.List {
-			top += MetricPadding
-			ctx := ctx.Row(top, top+MetricHeight)
-			top += MetricHeight
+					// TODO: don't wrap lines
+					label := th.Label(unit.Dp(CaptionHeight-2), metric.Name+"\n"+SizeToString(metric.Live))
+					label.Color = TextColor
+					label.Layout(gtx)
+				}),
+				layout.Rigid(func() {
+					gtx.Constraints.Width.Min = gtx.Constraints.Width.Max
+					Fill{Color: selectColor(i, RowBackgroundEven, RowBackgroundOdd)}.Layout(gtx)
 
-			color := g.RGB(0.1, 0.1, 0.1)
-			if i%2 == 1 {
-				color = g.RGB(0.2, 0.2, 0.2)
-			}
-			ctx.Draw.FillRect(&ctx.Area, color)
+					areaSize := f32.Point{
+						X: float32(gtx.Constraints.Width.Min),
+						Y: float32(gtx.Constraints.Height.Min),
+					}
 
-			{
-				header := ctx.Left(CaptionWidth)
+					samples := areaSize.X / SampleWidth
+					low := int(float32(metrics.SampleTime) - samples)
+					if low < 0 {
+						low = 0
+					}
+					high := low + int(ceil(samples))
 
-				// TODO: skip hidden rows
-				dot := header.Area.TopLeft().Add(g.V(0, CaptionHeight))
+					max := metric.Max()
+					maxValue := Max(max.Allocs, max.Frees)
 
-				text := metric.Name + "\n" + SizeToString(metric.Live)
-				header.Hover.FillRect(&header.Area, g.HSLA(0, 0, 0, 0.5))
-				DefaultFont.Draw(header.Hover, text, CaptionHeight-2, dot, g.White)
-			}
+					// prop := 1.0 / float32(maxValue+1)
+					scale := (areaSize.Y / 2) / float32(maxValue+1)
 
-			max := metric.Max()
-			maxValue := Max(max.Allocs, max.Frees)
-			prop := 1.0 / float32(maxValue+1)
-			scale := (ctx.Area.Size().Y / 2) / float32(maxValue+1)
+					corner := f32.Point{
+						Y: areaSize.Y / 2,
+					}
+					for p := low; p < high; p++ {
+						sample := metric.Samples[p%metrics.SampleCount]
 
-			corner := ctx.Area.LeftCenter()
-			for p := low; p < high; p++ {
-				sample := metric.Samples[p%metrics.SampleCount]
+						if p == metrics.SampleTime {
+							// TODO: transparency doesn't seem to work
+							FillRect{
+								Color: color.RGBA{0x30, 0x30, 0x30, 0xFF},
+								Rect: f32.Rectangle{
+									Min: f32.Point{X: corner.X, Y: 0},
+									Max: f32.Point{X: corner.X + SampleWidth, Y: areaSize.Y},
+								},
+							}.Layout(gtx)
+						}
 
-				if sample.Allocs > 0 {
-					allocsColor := g.HSL(0, 0.6, g.LerpClamp(float32(sample.Allocs)*prop, 0.3, 0.7))
-					ctx.Draw.FillRect(&g.Rect{
-						Min: corner,
-						Max: corner.Add(g.V(SampleWidth, float32(sample.Allocs)*scale)),
-					}, allocsColor)
-				}
+						if sample.Allocs > 0 {
+							//  g.HSL(0, 0.6, g.LerpClamp(float32(sample.Allocs)*prop, 0.3, 0.7))
+							FillRect{
+								Color: color.RGBA{0xF0, 0x80, 0x80, 0xFF},
+								Rect: f32.Rectangle{
+									Min: corner,
+									Max: corner.Add(f32.Point{
+										X: SampleWidth,
+										Y: float32(sample.Allocs) * scale,
+									}),
+								},
+							}.Layout(gtx)
+						}
 
-				if sample.Frees > 0 {
-					freesColor := g.HSL(0.3, 0.6, g.LerpClamp(float32(sample.Frees)*prop, 0.3, 0.7))
-					ctx.Draw.FillRect(&g.Rect{
-						Min: corner,
-						Max: corner.Add(g.V(SampleWidth, float32(-sample.Frees)*scale)),
-					}, freesColor)
-				}
+						if sample.Frees > 0 {
+							// g.HSL(0.3, 0.6, g.LerpClamp(float32(sample.Frees)*prop, 0.3, 0.7))
+							FillRect{
+								Color: color.RGBA{0x80, 0xF0, 0x80, 0xFF},
+								Rect: f32.Rectangle{
+									Min: corner,
+									Max: corner.Add(f32.Point{
+										X: SampleWidth,
+										Y: float32(-sample.Frees) * scale,
+									}),
+								},
+							}.Layout(gtx)
+						}
 
-				frame := g.Rect{
-					Min: g.Vector{corner.X, ctx.Area.Min.Y},
-					Max: g.Vector{corner.X + SampleWidth, ctx.Area.Max.Y},
-				}
-				if p == metrics.SampleTime {
-					ctx.Hover.FillRect(&frame, g.Color{0xff, 0xff, 0xff, 0x30})
-				}
-				if frame.Contains(ctx.Input.Mouse.Pos) {
-					ctx.Hover.FillRect(&frame, g.Color{0x80, 0x80, 0xff, 0x30})
-				}
-
-				corner.X += SampleWidth
-			}
-		}
-	*/
+						corner.X += SampleWidth
+					}
+				}),
+			)
+		})
+	})
 }
 
-func Fill(gtx *layout.Context, col color.RGBA) {
+type Fill struct {
+	Color color.RGBA
+}
+
+func (f Fill) Layout(gtx *layout.Context) {
 	cs := gtx.Constraints
 	d := image.Point{X: cs.Width.Min, Y: cs.Height.Min}
 	dr := f32.Rectangle{
 		Max: f32.Point{X: float32(d.X), Y: float32(d.Y)},
 	}
-	paint.ColorOp{Color: col}.Add(gtx.Ops)
+	paint.ColorOp{Color: f.Color}.Add(gtx.Ops)
 	paint.PaintOp{Rect: dr}.Add(gtx.Ops)
 	gtx.Dimensions = layout.Dimensions{Size: d}
+}
+
+type FillRect struct {
+	Color color.RGBA
+	Rect  f32.Rectangle
+}
+
+func (f FillRect) Layout(gtx *layout.Context) {
+	paint.ColorOp{Color: f.Color}.Add(gtx.Ops)
+	paint.PaintOp{Rect: f.Rect.Canon()}.Add(gtx.Ops)
 }
