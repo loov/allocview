@@ -3,7 +3,6 @@ package main
 import (
 	"image"
 	"image/color"
-	"math"
 
 	"gioui.org/app"
 	"gioui.org/f32"
@@ -12,6 +11,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
+	"github.com/loov/allocview/internal/g"
 )
 
 var (
@@ -76,8 +76,6 @@ const (
 	CaptionWidth  = CaptionHeight * 10
 )
 
-func ceil(v float32) float32 { return float32(math.Ceil(float64(v))) }
-
 func (view *MetricsView) Update(gtx *layout.Context, th *material.Theme) {
 	Fill{Color: BackgroundColor}.Layout(gtx)
 
@@ -122,12 +120,12 @@ func (view *MetricsView) Update(gtx *layout.Context, th *material.Theme) {
 					if low < 0 {
 						low = 0
 					}
-					high := low + int(ceil(samples))
+					high := low + int(g.Ceil(samples))
 
 					max := metric.Max()
 					maxValue := Max(max.Allocs, max.Frees)
 
-					// prop := 1.0 / float32(maxValue+1)
+					prop := 1.0 / float32(maxValue+1)
 					scale := (areaSize.Y / 2) / float32(maxValue+1)
 
 					corner := f32.Point{
@@ -148,9 +146,8 @@ func (view *MetricsView) Update(gtx *layout.Context, th *material.Theme) {
 						}
 
 						if sample.Allocs > 0 {
-							//  g.HSL(0, 0.6, g.LerpClamp(float32(sample.Allocs)*prop, 0.3, 0.7))
 							FillRect{
-								Color: color.RGBA{0xF0, 0x80, 0x80, 0xFF},
+								Color: g.HSL(0, 0.6, g.LerpClamp(float32(sample.Allocs)*prop, 0.3, 0.7)),
 								Rect: f32.Rectangle{
 									Min: corner,
 									Max: corner.Add(f32.Point{
@@ -162,9 +159,8 @@ func (view *MetricsView) Update(gtx *layout.Context, th *material.Theme) {
 						}
 
 						if sample.Frees > 0 {
-							// g.HSL(0.3, 0.6, g.LerpClamp(float32(sample.Frees)*prop, 0.3, 0.7))
 							FillRect{
-								Color: color.RGBA{0x80, 0xF0, 0x80, 0xFF},
+								Color: g.HSL(0.3, 0.6, g.LerpClamp(float32(sample.Frees)*prop, 0.3, 0.7)),
 								Rect: f32.Rectangle{
 									Min: corner,
 									Max: corner.Add(f32.Point{
