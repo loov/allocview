@@ -1,6 +1,6 @@
 module github.com/loov/allocview
 
-go 1.12
+go 1.14
 
 require (
 	gioui.org v0.0.0-20200403084947-efce78d414f3
