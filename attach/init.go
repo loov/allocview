@@ -1,12 +1,12 @@
 package attach
 
 import (
-	"bufio"
-	"encoding/binary"
 	"os"
 	"reflect"
 	"runtime"
 	"time"
+
+	"github.com/loov/allocview/internal/packet"
 )
 
 // Addr returns the address of this func.
@@ -38,17 +38,16 @@ func init() {
 }
 
 func monitor(exe string, f *os.File) {
-	out := bufio.NewWriter(f)
-	enc := EncodeWriter{out}
+	enc := packet.NewEncoder(1 << 20)
 
-	out.Write([]byte("alloclog\x00"))
-	enc.WriteString(exe)
+	enc.String("alloclog\x00")
+	enc.String(exe)
 
 	name, addr := Addr()
-	enc.WriteString(name)
-	enc.WriteUintptr(addr)
+	enc.String(name)
+	enc.Uintptr(addr)
 
-	enc.Flush()
+	f.Write(enc.LengthAndBytes())
 	f.Sync()
 
 	tick := time.NewTicker(time.Second / 10)
@@ -60,52 +59,26 @@ func monitor(exe string, f *os.File) {
 			records = make([]runtime.MemProfileRecord, n+n/3)
 			goto tryagain
 		}
-		enc.WriteInt64(t.UnixNano())
-		enc.WriteUint32(uint32(n))
+
+		enc.Reset()
+		enc.Int64(t.UnixNano())
+		enc.Uint32(uint32(n))
 	nextRecord:
 		for _, rec := range records[:n] {
-			enc.WriteInt64(rec.AllocBytes)
-			enc.WriteInt64(rec.FreeBytes)
-			enc.WriteInt64(rec.AllocObjects)
-			enc.WriteInt64(rec.FreeObjects)
+			enc.Int64(rec.AllocBytes)
+			enc.Int64(rec.FreeBytes)
+			enc.Int64(rec.AllocObjects)
+			enc.Int64(rec.FreeObjects)
 			for _, frame := range rec.Stack0 {
-				enc.WriteUintptr(frame)
+				enc.Uintptr(frame)
 				if frame == 0 {
 					continue nextRecord
 				}
 			}
-			enc.WriteUintptr(0)
+			enc.Uintptr(0)
 		}
-		enc.Flush()
+
+		f.Write(enc.LengthAndBytes())
 		f.Sync()
 	}
-}
-
-type EncodeWriter struct {
-	*bufio.Writer
-}
-
-func (w *EncodeWriter) WriteUint64(v uint64) {
-	var data [8]byte
-	binary.LittleEndian.PutUint64(data[:], v)
-	w.Write(data[:])
-}
-
-func (w *EncodeWriter) WriteUintptr(v uintptr) {
-	w.WriteUint64(uint64(v))
-}
-
-func (w *EncodeWriter) WriteInt64(v int64) {
-	w.WriteUint64(uint64(v))
-}
-
-func (w *EncodeWriter) WriteUint32(v uint32) {
-	var data [4]byte
-	binary.LittleEndian.PutUint32(data[:], v)
-	w.Write(data[:])
-}
-
-func (w *EncodeWriter) WriteString(s string) {
-	w.WriteUint32(uint32(len(s)))
-	w.Write([]byte(s))
 }
