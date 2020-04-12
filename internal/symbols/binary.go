@@ -11,8 +11,7 @@ import (
 
 // Binary handles symbol lookup based on stack frames.
 type Binary struct {
-	Data  *dwarf.Data
-	Lines *Lines
+	Data *dwarf.Data
 
 	SymTable *gosym.Table
 }
@@ -23,14 +22,8 @@ func Load(path string) (*Binary, error) {
 		return nil, fmt.Errorf("unable to load dwarf data: %w", err)
 	}
 
-	lines, err := NewLines(data)
-	if err != nil {
-		return nil, fmt.Errorf("unable to load lines table: %w", err)
-	}
-
 	return &Binary{
-		Data:  data,
-		Lines: lines,
+		Data: data,
 
 		SymTable: symtab,
 	}, nil
