@@ -1,6 +1,7 @@
 package attach
 
 import (
+	"net"
 	"os"
 	"reflect"
 	"runtime"
@@ -18,7 +19,7 @@ func Addr() (string, uintptr) {
 }
 
 func init() {
-	sockPath := os.Getenv("ALLOCLOG")
+	sockPath := os.Getenv("ALLOCLOGSOCK")
 	if sockPath == "" {
 		return
 	}
@@ -28,16 +29,22 @@ func init() {
 		panic(err)
 	}
 
-	f, err := os.Create(sockPath)
+	sockAddr, err := net.ResolveUnixAddr("unix", sockPath)
 	if err != nil {
 		panic(err)
 	}
 
+	conn, err := net.DialUnix("unix", nil, sockAddr)
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+
 	runtime.MemProfileRate = 1
-	monitor(exe, f)
+	_ = monitor(exe, conn)
 }
 
-func monitor(exe string, f *os.File) {
+func monitor(exe string, conn *net.UnixConn) error {
 	enc := packet.NewEncoder(1 << 20)
 
 	enc.String("alloclog\x00")
@@ -47,8 +54,9 @@ func monitor(exe string, f *os.File) {
 	enc.String(name)
 	enc.Uintptr(addr)
 
-	f.Write(enc.LengthAndBytes())
-	f.Sync()
+	if _, err := conn.Write(enc.LengthAndBytes()); err != nil {
+		return err
+	}
 
 	tick := time.NewTicker(time.Second / 10)
 	records := make([]runtime.MemProfileRecord, 1000)
@@ -78,7 +86,10 @@ func monitor(exe string, f *os.File) {
 			enc.Uintptr(0)
 		}
 
-		f.Write(enc.LengthAndBytes())
-		f.Sync()
+		if _, err := conn.Write(enc.LengthAndBytes()); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
