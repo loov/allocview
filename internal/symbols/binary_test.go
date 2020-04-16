@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/loov/allocview/internal/symbols"
+	"loov.dev/allocview/internal/symbols"
 )
 
 func TestSymbols(t *testing.T) {

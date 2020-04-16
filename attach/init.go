@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/loov/allocview/internal/packet"
+	"loov.dev/allocview/internal/packet"
 )
 
 // Addr returns the address of this func.

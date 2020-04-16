@@ -16,7 +16,7 @@ import (
 	"gioui.org/unit"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/loov/allocview/trace"
+	"loov.dev/allocview/trace"
 )
 
 func init() { runtime.LockOSThread() }

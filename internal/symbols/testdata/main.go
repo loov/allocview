@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/loov/allocview/attach"
+	"loov.dev/allocview/attach"
 )
 
 //go:noinline

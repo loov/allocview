@@ -11,7 +11,8 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
-	"github.com/loov/allocview/internal/g"
+
+	"loov.dev/allocview/internal/g"
 )
 
 var (

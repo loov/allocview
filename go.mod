@@ -1,4 +1,4 @@
-module github.com/loov/allocview
+module loov.dev/allocview
 
 go 1.14
 
