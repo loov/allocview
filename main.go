@@ -16,7 +16,7 @@ import (
 	"gioui.org/unit"
 	"golang.org/x/sync/errgroup"
 
-	"loov.dev/allocview/trace"
+	"loov.dev/allocview/internal/allocfreetrace"
 )
 
 func init() { runtime.LockOSThread() }
@@ -86,7 +86,7 @@ func main() {
 func ReadSim(metrics *Metrics) error {
 	for {
 		for i := 0; i < 10; i++ {
-			span := fmt.Sprintf("trace %d", i)
+			span := fmt.Sprintf("allocfreetrace %d", i)
 			metrics.Update(span, time.Now(), Sample{
 				Allocs: 100 + rand.Int63n(10000),
 				Frees:  100 + rand.Int63n(10000),
@@ -97,7 +97,7 @@ func ReadSim(metrics *Metrics) error {
 }
 
 func ReadInput(metrics *Metrics, r io.Reader) error {
-	reader := trace.NewReader(os.Stdin)
+	reader := allocfreetrace.NewReader(os.Stdin)
 	for {
 		event, err := reader.Read()
 		if err != nil {
@@ -107,11 +107,11 @@ func ReadInput(metrics *Metrics, r io.Reader) error {
 		now := time.Now()
 
 		switch event.Kind {
-		case trace.Alloc:
+		case allocfreetrace.Alloc:
 			metrics.Update(event.Type, now, Sample{
 				Allocs: event.Size,
 			})
-		case trace.Free:
+		case allocfreetrace.Free:
 			metrics.Update(event.Type, now, Sample{
 				Frees: event.Size,
 			})
