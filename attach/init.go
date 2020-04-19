@@ -47,7 +47,7 @@ func init() {
 func monitor(exe string, conn *net.UnixConn) error {
 	enc := packet.NewEncoder(1 << 20)
 
-	enc.String("alloclog\x00")
+	enc.String("alloclog")
 	enc.String(exe)
 
 	name, addr := Addr()

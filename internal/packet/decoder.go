@@ -1,10 +1,42 @@
 package packet
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"io"
+)
+
+func ReadLength(r io.Reader) (int, error) {
+	var buf [4]byte
+	_, err := io.ReadFull(r, buf[:])
+	if err != nil {
+		return 0, err
+	}
+
+	v := binary.LittleEndian.Uint32(buf[:])
+	return int(v), nil
+}
 
 type Decoder struct {
 	off  int
 	data []byte
+}
+
+func (dec *Decoder) Read(r io.Reader) error {
+	var lengthBuffer [4]byte
+	_, err := io.ReadFull(r, lengthBuffer[:])
+	if err != nil {
+		return err
+	}
+
+	length := binary.LittleEndian.Uint32(lengthBuffer[:])
+	// TODO: avoid realloc
+	dec.data = make([]byte, length)
+	_, err = io.ReadFull(r, dec.data[:])
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (dec *Decoder) Reset(data []byte) {

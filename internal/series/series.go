@@ -2,6 +2,8 @@ package series
 
 // Series is a ring-buffer indexed by Ring.
 type Series struct {
+	Stack []uintptr
+
 	TotalAllocBytes   int64
 	TotalAllocObjects int64
 	Samples           []Sample

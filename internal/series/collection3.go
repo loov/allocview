@@ -24,6 +24,7 @@ func (coll *Collection3) UpdateSample(index SampleIndex, stack []uintptr, sample
 	series, ok := coll.ByStack[h]
 	if !ok {
 		series = &Series{
+			Stack:   h[:],
 			Samples: make([]Sample, coll.SampleCount),
 		}
 		coll.ByStack[h] = series

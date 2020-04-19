@@ -1,12 +1,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
-	"io"
 	"log"
-	"math/rand"
 	"os"
+	"os/exec"
 	"runtime"
 	"time"
 
@@ -15,7 +15,7 @@ import (
 	"gioui.org/unit"
 	"golang.org/x/sync/errgroup"
 
-	"loov.dev/allocview/internal/allocfreetrace"
+	"loov.dev/allocview/internal/prof"
 )
 
 func init() {
@@ -24,84 +24,67 @@ func init() {
 }
 
 func main() {
-	var profile Profile
-	flag.StringVar(&profile.Cpu, "cpuprofile", "", "write cpu profile to `file`")
-	flag.StringVar(&profile.Mem, "memprofile", "", "write memory profile to `file`")
+	ctx := context.Background()
 
-	var interval time.Duration
-	flag.DurationVar(&interval, "interval", time.Second, "sampling interval")
+	flag.Usage = func() {
+		w := flag.CommandLine.Output()
+		fmt.Fprintf(w, `Usage: %s [flags] subcommand...
 
-	var simulate bool
-	flag.BoolVar(&simulate, "simulate", false, "simulate memory usage")
+This tool visualizes allocations of a Go program.
+
+Only programs that have imported "loov.dev/allocview/attach" are supported at the moment.
+
+When given a subcommand, it executes that subcommand and starts live-visualization
+of the program. As an example:
+
+    allocview go run ./testdata
+
+Flags:
+`, os.Args[0])
+		flag.PrintDefaults()
+	}
+
+	var profcfg prof.Config
+	flag.StringVar(&profcfg.Cpu, "cpuprofile", "", "write cpu profile to `file`")
+	flag.StringVar(&profcfg.Mem, "memprofile", "", "write memory profile to `file`")
+
+	var config Config
+
+	flag.DurationVar(&config.SampleDuration, "sample-duration", time.Second, "sample duration")
+	flag.IntVar(&config.SampleCount, "sample-count", 1024, "sample count")
 
 	flag.Parse()
 
-	defer profile.Run()()
+	if len(flag.Args()) == 0 {
+		flag.Usage()
+		os.Exit(2)
+	}
 
-	metrics := NewMetrics(time.Now(), interval, 2<<10)
+	defer profcfg.Run()()
+
+	// Setup command that we want to monitor.
+	args := flag.Args()
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 
 	var group errgroup.Group
-	if simulate {
-		group.Go(func() error { return ReadSim(metrics) })
-	} else {
-		group.Go(func() error { return ReadInput(metrics, os.Stdin) })
-		group.Go(func() error { return RegularUpdates(metrics, interval) })
+
+	server := NewServer()
+	err := server.Exec(ctx, &group, cmd)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	group.Go(func() error {
 		window := app.NewWindow(app.Size(unit.Dp(800), unit.Dp(650)))
-		view := NewMetricsView(metrics)
+		view := NewView(config, server)
 		return view.Run(window)
 	})
 
 	app.Main()
 
-	err := group.Wait()
+	err = group.Wait()
 	if err != nil {
 		log.Println(err)
 	}
-}
-
-func ReadSim(metrics *Metrics) error {
-	for {
-		for i := 0; i < 10; i++ {
-			span := fmt.Sprintf("allocfreetrace %d", i)
-			metrics.Update(span, time.Now(), Sample{
-				Allocs: 100 + rand.Int63n(10000),
-				Frees:  100 + rand.Int63n(10000),
-			})
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
-}
-
-func ReadInput(metrics *Metrics, r io.Reader) error {
-	reader := allocfreetrace.NewReader(os.Stdin)
-	for {
-		event, err := reader.Read()
-		if err != nil {
-			return err
-		}
-
-		now := time.Now()
-
-		switch event.Kind {
-		case allocfreetrace.Alloc:
-			metrics.Update(event.Type, now, Sample{
-				Allocs: event.Size,
-			})
-		case allocfreetrace.Free:
-			metrics.Update(event.Type, now, Sample{
-				Frees: event.Size,
-			})
-		}
-	}
-}
-
-func RegularUpdates(metrics *Metrics, interval time.Duration) error {
-	tick := time.NewTicker(interval)
-	for range tick.C {
-		metrics.Update("time", time.Now(), Sample{})
-	}
-	return nil
 }

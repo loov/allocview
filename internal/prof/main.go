@@ -1,4 +1,4 @@
-package main
+package prof
 
 import (
 	"log"
@@ -6,34 +6,34 @@ import (
 	"runtime/pprof"
 )
 
-type Profile struct {
+type Config struct {
 	Cpu string
 	Mem string
 
 	cpufile *os.File
 }
 
-func (profile *Profile) Run() func() {
-	profile.Start()
-	return profile.Stop
+func (conf *Config) Run() func() {
+	conf.Start()
+	return conf.Stop
 }
 
-func (profile *Profile) Start() {
-	if profile.Cpu != "" {
-		f, err := os.Create(profile.Cpu)
+func (conf *Config) Start() {
+	if conf.Cpu != "" {
+		f, err := os.Create(conf.Cpu)
 		if err != nil {
 			log.Fatal("could not create CPU profile: ", err)
 		}
-		profile.cpufile = f
+		conf.cpufile = f
 		if err := pprof.StartCPUProfile(f); err != nil {
 			log.Fatal("could not start CPU profile: ", err)
 		}
 	}
 }
 
-func (profile *Profile) Stop() {
-	if profile.Mem != "" {
-		f, err := os.Create(profile.Mem)
+func (conf *Config) Stop() {
+	if conf.Mem != "" {
+		f, err := os.Create(conf.Mem)
 		if err != nil {
 			log.Fatal("could not create memory profile: ", err)
 		}
@@ -43,8 +43,8 @@ func (profile *Profile) Stop() {
 		f.Close()
 	}
 
-	if profile.Cpu != "" {
+	if conf.Cpu != "" {
 		pprof.StopCPUProfile()
-		profile.cpufile.Close()
+		conf.cpufile.Close()
 	}
 }
