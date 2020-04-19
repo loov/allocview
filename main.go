@@ -78,7 +78,10 @@ Flags:
 	}
 
 	group.Go(func() error {
-		window := app.NewWindow(app.Size(unit.Dp(800), unit.Dp(650)))
+		window := app.NewWindow(
+			app.Size(unit.Dp(800), unit.Dp(650)),
+			app.Title("AllocView"),
+		)
 		view := NewView(config, server)
 		return view.Run(window)
 	})
