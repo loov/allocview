@@ -69,7 +69,9 @@ func monitor(exe string, conn *net.UnixConn) error {
 		}
 
 		enc.Reset()
+
 		enc.Int64(t.UnixNano())
+
 		enc.Uint32(uint32(n))
 	nextRecord:
 		for _, rec := range records[:n] {

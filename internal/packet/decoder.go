@@ -30,6 +30,7 @@ func (dec *Decoder) Read(r io.Reader) error {
 
 	length := binary.LittleEndian.Uint32(lengthBuffer[:])
 	// TODO: avoid realloc
+	dec.off = 0
 	dec.data = make([]byte, length)
 	_, err = io.ReadFull(r, dec.data[:])
 	if err != nil {
