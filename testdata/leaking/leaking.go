@@ -11,9 +11,10 @@ func main() {
 	total := 0
 	var leak [][]byte
 	for {
-		alloc := 1000 + rand.Intn(1000)*10
-		leak = append(leak, make([]byte, alloc))
-		total += alloc
+		alloc := 10000 + rand.Intn(1000)*10
+		mem := make([]byte, alloc)
+		leak = append(leak, mem)
+		total += len(mem)
 
 		if rand.Intn(10) > 8 {
 			i := rand.Intn(len(leak))

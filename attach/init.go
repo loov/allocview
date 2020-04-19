@@ -68,6 +68,9 @@ func monitor(exe string, conn *net.UnixConn) error {
 		tick := time.NewTicker(time.Second / 10)
 		records := make([]runtime.MemProfileRecord, 1000)
 		for t := range tick.C {
+			// TODO: figure out a better way to do this
+			// runtime.GC forces mem profile to be updated
+			runtime.GC()
 		tryagain:
 			n, ok := runtime.MemProfile(records, true)
 			if !ok {
@@ -85,6 +88,7 @@ func monitor(exe string, conn *net.UnixConn) error {
 				enc.Int64(rec.FreeBytes)
 				enc.Int64(rec.AllocObjects)
 				enc.Int64(rec.FreeObjects)
+
 				for _, frame := range rec.Stack0 {
 					enc.Uintptr(frame)
 					if frame == 0 {
@@ -96,7 +100,6 @@ func monitor(exe string, conn *net.UnixConn) error {
 
 			if _, err := conn.Write(enc.LengthAndBytes()); err != nil {
 				panic(err)
-				return
 			}
 		}
 	}()
