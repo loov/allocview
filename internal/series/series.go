@@ -46,6 +46,14 @@ func (series *Series) Max() (r Sample) {
 	return r
 }
 
+func (series *Series) MaxSampleBytes() (r int64) {
+	for _, sample := range series.Samples {
+		r = max(r, sample.AllocBytes)
+		r = max(r, sample.FreeBytes)
+	}
+	return r
+}
+
 func max(a, b int64) int64 {
 	if a > b {
 		return a

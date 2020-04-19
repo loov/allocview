@@ -40,7 +40,7 @@ func (coll *Collection) UpdateToTime(now time.Time) SampleIndex {
 	if coll.SampleHead != sampleTime {
 		// TODO: optimize this loop
 		for _, s := range coll.List {
-			for t := coll.SampleHead; t < sampleTime; t++ {
+			for t := coll.SampleHead + 1; t < sampleTime; t++ {
 				s.Samples[t%len(s.Samples)] = Sample{}
 			}
 		}

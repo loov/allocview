@@ -115,11 +115,10 @@ func (view *View) Update(gtx *layout.Context, th *material.Theme) {
 					}
 					high := low + int(g.Ceil(samples))
 
-					max := series.Max()
-					maxValue := maxInt64(max.AllocBytes, max.FreeBytes)
+					max := series.MaxSampleBytes()
 
-					prop := 1.0 / float32(maxValue+1)
-					scale := (areaSize.Y / 2) / float32(maxValue+1)
+					prop := 1.0 / float32(max+1)
+					scale := (areaSize.Y / 2) / float32(max+1)
 
 					corner := f32.Point{
 						Y: areaSize.Y / 2,
@@ -170,13 +169,6 @@ func (view *View) Update(gtx *layout.Context, th *material.Theme) {
 			)
 		})
 	})
-}
-
-func maxInt64(a, b int64) int64 {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 type Fill struct {
