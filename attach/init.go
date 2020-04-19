@@ -38,10 +38,13 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	defer conn.Close()
 
 	runtime.MemProfileRate = 1
-	_ = monitor(exe, conn)
+
+	err = monitor(exe, conn)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func monitor(exe string, conn *net.UnixConn) error {
@@ -55,43 +58,48 @@ func monitor(exe string, conn *net.UnixConn) error {
 	enc.Uintptr(addr)
 
 	if _, err := conn.Write(enc.LengthAndBytes()); err != nil {
+		_ = conn.Close()
 		return err
 	}
 
-	tick := time.NewTicker(time.Second / 10)
-	records := make([]runtime.MemProfileRecord, 1000)
-	for t := range tick.C {
-	tryagain:
-		n, ok := runtime.MemProfile(records, false)
-		if !ok {
-			records = make([]runtime.MemProfileRecord, n+n/3)
-			goto tryagain
-		}
+	go func() {
+		defer conn.Close()
 
-		enc.Reset()
-
-		enc.Int64(t.UnixNano())
-
-		enc.Uint32(uint32(n))
-	nextRecord:
-		for _, rec := range records[:n] {
-			enc.Int64(rec.AllocBytes)
-			enc.Int64(rec.FreeBytes)
-			enc.Int64(rec.AllocObjects)
-			enc.Int64(rec.FreeObjects)
-			for _, frame := range rec.Stack0 {
-				enc.Uintptr(frame)
-				if frame == 0 {
-					continue nextRecord
-				}
+		tick := time.NewTicker(time.Second / 10)
+		records := make([]runtime.MemProfileRecord, 1000)
+		for t := range tick.C {
+		tryagain:
+			n, ok := runtime.MemProfile(records, true)
+			if !ok {
+				records = make([]runtime.MemProfileRecord, n+n/3)
+				goto tryagain
 			}
-			enc.Uintptr(0)
-		}
+			enc.Reset()
 
-		if _, err := conn.Write(enc.LengthAndBytes()); err != nil {
-			return err
+			enc.Int64(t.UnixNano())
+
+			enc.Uint32(uint32(n))
+		nextRecord:
+			for _, rec := range records[:n] {
+				enc.Int64(rec.AllocBytes)
+				enc.Int64(rec.FreeBytes)
+				enc.Int64(rec.AllocObjects)
+				enc.Int64(rec.FreeObjects)
+				for _, frame := range rec.Stack0 {
+					enc.Uintptr(frame)
+					if frame == 0 {
+						continue nextRecord
+					}
+				}
+				enc.Uintptr(0)
+			}
+
+			if _, err := conn.Write(enc.LengthAndBytes()); err != nil {
+				panic(err)
+				return
+			}
 		}
-	}
+	}()
 
 	return nil
 }

@@ -17,6 +17,10 @@ func (enc *Encoder) Reset() {
 	enc.Int32(0)
 }
 
+func (enc *Encoder) BytesLen() int {
+	return len(enc.data) - 4
+}
+
 func (enc *Encoder) LengthAndBytes() []byte {
 	binary.LittleEndian.PutUint32(enc.data, uint32(len(enc.data)-4))
 	return enc.data

@@ -65,7 +65,9 @@ Flags:
 	// Setup command that we want to monitor.
 	args := flag.Args()
 	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	var group errgroup.Group
 

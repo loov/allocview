@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -13,6 +14,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"loov.dev/allocview/internal/packet"
+	"loov.dev/allocview/internal/series"
 )
 
 // ConnectDeadline defines how fast clients should connect to the server.
@@ -78,13 +80,23 @@ func (server *Server) Exec(ctx context.Context, group *errgroup.Group, cmd *exec
 	}
 
 	// we'll set deadline for the first packet to handle misconfigurations
-	conn.SetReadDeadline(time.Now().Add(ConnectDeadline))
+	err = conn.SetReadDeadline(time.Now().Add(ConnectDeadline))
+	if err != nil {
+		_ = cmd.Process.Kill()
+		_ = sock.Close()
+		return fmt.Errorf("failed to set read deadline: %w", err)
+	}
 	var dec packet.Decoder
 	err = dec.Read(conn)
 	if err != nil {
 		return fmt.Errorf("failed to read first packet: %w", err)
 	}
-	conn.SetReadDeadline(time.Time{})
+	err = conn.SetReadDeadline(time.Time{})
+	if err != nil {
+		_ = cmd.Process.Kill()
+		_ = sock.Close()
+		return fmt.Errorf("failed to set read deadline: %w", err)
+	}
 
 	// TODO: handle magic header better
 	magic := dec.String()
@@ -98,18 +110,24 @@ func (server *Server) Exec(ctx context.Context, group *errgroup.Group, cmd *exec
 
 	// Reading of profiles.
 	group.Go(func() error {
-		return server.readProfiles(conn, exename, funcname, funcaddr)
+		err := server.readProfiles(conn, exename, funcname, funcaddr)
+		log.Printf("readProfiles returned: %v", err)
+		return err
 	})
 
 	group.Go(func() error {
 		// waits for program to close
-		return cmd.Wait()
+		err := cmd.Wait()
+		log.Printf("program exited: %v", err)
+		return err
 	})
 
 	return nil
 }
 
 func (server *Server) readProfiles(conn *net.UnixConn, exename, funcname string, funcaddr uintptr) error {
+	lastState := map[[32]uintptr]series.Sample{}
+
 	var dec packet.Decoder
 	for {
 		err := dec.Read(conn)
@@ -132,10 +150,11 @@ func (server *Server) readProfiles(conn *net.UnixConn, exename, funcname string,
 		}
 
 		for i, rec := range profile.Records {
-			rec.AllocBytes = dec.Int64()
-			rec.FreeBytes = dec.Int64()
-			rec.AllocObjects = dec.Int64()
-			rec.FreeObjects = dec.Int64()
+			var next series.Sample
+			next.AllocBytes = dec.Int64()
+			next.FreeBytes = dec.Int64()
+			next.AllocObjects = dec.Int64()
+			next.FreeObjects = dec.Int64()
 
 			for i := 0; ; i++ {
 				frame := dec.Uintptr()
@@ -145,6 +164,14 @@ func (server *Server) readProfiles(conn *net.UnixConn, exename, funcname string,
 
 				rec.Stack0[i] = frame
 			}
+
+			last, _ := lastState[rec.Stack0]
+			lastState[rec.Stack0] = next
+
+			rec.AllocBytes = next.AllocBytes - last.AllocBytes
+			rec.FreeBytes = next.FreeBytes - last.FreeBytes
+			rec.AllocObjects = next.AllocObjects - last.AllocObjects
+			rec.FreeObjects = next.FreeObjects - last.FreeObjects
 
 			profile.Records[i] = rec
 		}

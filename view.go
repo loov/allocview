@@ -64,14 +64,14 @@ const (
 	SeriesPadding = 5
 	CaptionHeight = 12
 	SampleWidth   = 3
-	CaptionWidth  = CaptionHeight * 10
+	CaptionWidth  = CaptionHeight * 20
 )
 
 func (view *View) Update(gtx *layout.Context, th *material.Theme) {
 	Fill{Color: BackgroundColor}.Layout(gtx)
 
 	collection := view.Summary.Collection
-	sort.Slice(collection.List, func(i, k int) bool {
+	sort.SliceStable(collection.List, func(i, k int) bool {
 		return collection.List[i].TotalAllocBytes > collection.List[k].TotalAllocBytes
 	})
 
@@ -93,9 +93,12 @@ func (view *View) Update(gtx *layout.Context, th *material.Theme) {
 					name := view.Summary.StackAsString(series.Stack)
 					// TODO: don't wrap lines
 					live := SizeToString(series.TotalAllocBytes) + " / " + strconv.Itoa(int(series.TotalAllocObjects))
-					label := th.Label(unit.Dp(CaptionHeight-2), name+"\n"+live)
+					label := th.Label(unit.Dp(CaptionHeight-3), name+live)
 					label.Color = TextColor
-					label.Layout(gtx)
+
+					nowrap := *gtx
+					nowrap.Constraints.Width.Max = 1024
+					label.Layout(&nowrap)
 				}),
 
 				layout.Rigid(func() {
