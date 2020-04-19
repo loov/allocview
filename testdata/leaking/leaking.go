@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	_ "loov.dev/allocview/attach"
 )
 
 func main() {

@@ -3,6 +3,8 @@ package main
 import (
 	"runtime"
 	"time"
+
+	_ "loov.dev/allocview/attach"
 )
 
 type Node struct {
