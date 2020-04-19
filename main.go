@@ -18,7 +18,10 @@ import (
 	"loov.dev/allocview/internal/allocfreetrace"
 )
 
-func init() { runtime.LockOSThread() }
+func init() {
+	runtime.LockOSThread()
+	gofont.Register()
+}
 
 func main() {
 	var profile Profile
@@ -34,8 +37,6 @@ func main() {
 	flag.Parse()
 
 	defer profile.Run()()
-
-	gofont.Register()
 
 	metrics := NewMetrics(time.Now(), interval, 2<<10)
 
