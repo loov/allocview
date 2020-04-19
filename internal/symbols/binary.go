@@ -14,6 +14,8 @@ type Binary struct {
 	Data *dwarf.Data
 
 	SymTable *gosym.Table
+
+	Offset int64
 }
 
 func Load(path string) (*Binary, error) {
@@ -27,6 +29,15 @@ func Load(path string) (*Binary, error) {
 
 		SymTable: symtab,
 	}, nil
+}
+
+func (bin *Binary) UpdateOffset(funcname string, funcaddr uintptr) {
+	// TODO: handle errors
+	sym := bin.SymTable.LookupFunc(funcname)
+	if sym == nil {
+		return
+	}
+	bin.Offset = int64(sym.Entry) - int64(funcaddr)
 }
 
 func loadDwarfData(path string) (*dwarf.Data, *gosym.Table, error) {

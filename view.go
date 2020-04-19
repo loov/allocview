@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"sort"
@@ -91,8 +90,8 @@ func (view *View) Update(gtx *layout.Context, th *material.Theme) {
 					gtx.Constraints.Width.Min, gtx.Constraints.Width.Max = CaptionWidth, CaptionWidth
 					Fill{Color: selectColor(i, RowBackgroundEvenH, RowBackgroundOddH)}.Layout(gtx)
 
+					name := view.Summary.StackAsString(series.Stack)
 					// TODO: don't wrap lines
-					name := fmt.Sprintf("%v", series.Stack)
 					live := SizeToString(series.TotalAllocBytes) + " / " + strconv.Itoa(int(series.TotalAllocObjects))
 					label := th.Label(unit.Dp(CaptionHeight-2), name+"\n"+live)
 					label.Color = TextColor
