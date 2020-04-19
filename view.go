@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"sort"
+	"strconv"
 	"time"
 
 	"gioui.org/app"
@@ -16,7 +17,6 @@ import (
 	"gioui.org/widget/material"
 
 	"loov.dev/allocview/internal/g"
-	"loov.dev/allocview/internal/series"
 )
 
 type Config struct {
@@ -25,14 +25,14 @@ type Config struct {
 }
 
 type View struct {
-	Server     *Server
-	Collection *series.Collection3
+	Server  *Server
+	Summary *Summary
 }
 
 func NewView(config Config, server *Server) *View {
 	return &View{
-		Server:     server,
-		Collection: series.NewCollection3(time.Now(), config.SampleDuration, config.SampleCount),
+		Server:  server,
+		Summary: NewSummary(config),
 	}
 }
 
@@ -54,15 +54,10 @@ func (view *View) Run(w *app.Window) error {
 			}
 
 		case profile := <-view.Server.Profiles():
-			view.Aggregate(profile)
+			view.Summary.Add(profile)
 			w.Invalidate()
 		}
 	}
-}
-
-// Aggregate adds profile to the collections.
-func (view *View) Aggregate(profile *Profile) {
-	// TODO:
 }
 
 const (
@@ -76,9 +71,9 @@ const (
 func (view *View) Update(gtx *layout.Context, th *material.Theme) {
 	Fill{Color: BackgroundColor}.Layout(gtx)
 
-	collection := view.Collection
+	collection := view.Summary.Collection
 	sort.Slice(collection.List, func(i, k int) bool {
-		return collection.List[i].TotalAllocBytes < collection.List[k].TotalAllocBytes
+		return collection.List[i].TotalAllocBytes > collection.List[k].TotalAllocBytes
 	})
 
 	inset := layout.Inset{Bottom: unit.Dp(SeriesPadding)}
@@ -97,7 +92,9 @@ func (view *View) Update(gtx *layout.Context, th *material.Theme) {
 					Fill{Color: selectColor(i, RowBackgroundEvenH, RowBackgroundOddH)}.Layout(gtx)
 
 					// TODO: don't wrap lines
-					label := th.Label(unit.Dp(CaptionHeight-2), fmt.Sprintf("%v", series.Stack)+"\n"+SizeToString(series.TotalAllocBytes)+SizeToString(series.TotalAllocObjects))
+					name := fmt.Sprintf("%v", series.Stack)
+					live := SizeToString(series.TotalAllocBytes) + " / " + strconv.Itoa(int(series.TotalAllocObjects))
+					label := th.Label(unit.Dp(CaptionHeight-2), name+"\n"+live)
 					label.Color = TextColor
 					label.Layout(gtx)
 				}),
