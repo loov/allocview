@@ -26,12 +26,16 @@ type Config struct {
 type View struct {
 	Server  *Server
 	Summary *Summary
+
+	series layout.List
 }
 
 func NewView(config Config, server *Server) *View {
 	return &View{
 		Server:  server,
 		Summary: NewSummary(config),
+
+		series: layout.List{Axis: layout.Vertical},
 	}
 }
 
@@ -77,8 +81,7 @@ func (view *View) Update(gtx *layout.Context, th *material.Theme) {
 
 	inset := layout.Inset{Bottom: unit.Dp(SeriesPadding)}
 
-	list := layout.List{Axis: layout.Vertical}
-	list.Layout(gtx, len(collection.List), func(i int) {
+	view.series.Layout(gtx, len(collection.List), func(i int) {
 		inset.Layout(gtx, func() {
 			gtx.Constraints.Height.Min = gtx.Px(unit.Dp(SeriesHeight))
 			gtx.Constraints.Height.Max = gtx.Constraints.Height.Min
