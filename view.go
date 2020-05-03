@@ -96,7 +96,7 @@ func (view *View) Update(gtx *layout.Context, th *material.Theme) {
 					name := view.Summary.StackAsString(series.Stack)
 					// TODO: don't wrap lines
 					live := SizeToString(series.TotalAllocBytes) + " / " + strconv.Itoa(int(series.TotalAllocObjects))
-					label := th.Label(unit.Dp(CaptionHeight-3), name+live)
+					label := material.Label(th, unit.Dp(CaptionHeight-3), name+live)
 					label.Color = TextColor
 
 					nowrap := *gtx
