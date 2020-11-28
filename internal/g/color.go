@@ -2,7 +2,7 @@ package g
 
 import "image/color"
 
-type Color = color.RGBA
+type Color = color.NRGBA
 
 var (
 	White  = Color{0xFF, 0xFF, 0xFF, 0xFF}

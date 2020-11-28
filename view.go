@@ -9,8 +9,11 @@ import (
 
 	"gioui.org/app"
 	"gioui.org/f32"
+	"gioui.org/font/gofont"
 	"gioui.org/io/system"
 	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
@@ -40,9 +43,8 @@ func NewView(config Config, server *Server) *View {
 }
 
 func (view *View) Run(w *app.Window) error {
-	th := material.NewTheme()
-	gtx := layout.NewContext(w.Queue())
-
+	th := material.NewTheme(gofont.Collection())
+	var ops op.Ops
 	for {
 		select {
 		case e := <-w.Events():
@@ -50,8 +52,7 @@ func (view *View) Run(w *app.Window) error {
 			case system.DestroyEvent:
 				return e.Err
 			case system.FrameEvent:
-				gtx.Reset(e.Config, e.Size)
-
+				gtx := layout.NewContext(&ops, e)
 				view.Update(gtx, th)
 				e.Frame(gtx.Ops)
 			}
@@ -71,8 +72,8 @@ const (
 	CaptionWidth  = CaptionHeight * 20
 )
 
-func (view *View) Update(gtx *layout.Context, th *material.Theme) {
-	Fill{Color: BackgroundColor}.Layout(gtx)
+func (view *View) Update(gtx layout.Context, th *material.Theme) {
+	paint.Fill(gtx.Ops, BackgroundColor)
 
 	collection := view.Summary.Collection
 	sort.SliceStable(collection.List, func(i, k int) bool {
@@ -81,17 +82,17 @@ func (view *View) Update(gtx *layout.Context, th *material.Theme) {
 
 	inset := layout.Inset{Bottom: unit.Dp(SeriesPadding)}
 
-	view.series.Layout(gtx, len(collection.List), func(i int) {
-		inset.Layout(gtx, func() {
-			gtx.Constraints.Height.Min = gtx.Px(unit.Dp(SeriesHeight))
-			gtx.Constraints.Height.Max = gtx.Constraints.Height.Min
-
+	view.series.Layout(gtx, len(collection.List), func(gtx layout.Context, i int) layout.Dimensions {
+		return inset.Layout(gtx, func(gtx layout.Context) (dimension layout.Dimensions) {
+			captionWidth := gtx.Px(unit.Dp(CaptionWidth))
+			seriesHeight := gtx.Px(unit.Dp(SeriesHeight))
 			series := collection.List[i]
 
-			layout.Flex{}.Layout(gtx,
-				layout.Rigid(func() {
-					gtx.Constraints.Width.Min, gtx.Constraints.Width.Max = CaptionWidth, CaptionWidth
-					Fill{Color: selectColor(i, RowBackgroundEvenH, RowBackgroundOddH)}.Layout(gtx)
+			return layout.Flex{}.Layout(gtx,
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					size := image.Pt(captionWidth, seriesHeight)
+					clip.Rect{Max: size}.Add(gtx.Ops)
+					paint.Fill(gtx.Ops, selectColor(i, RowBackgroundEvenH, RowBackgroundOddH))
 
 					name := view.Summary.StackAsString(series.Stack)
 					// TODO: don't wrap lines
@@ -99,19 +100,19 @@ func (view *View) Update(gtx *layout.Context, th *material.Theme) {
 					label := material.Label(th, unit.Dp(CaptionHeight-3), name+live)
 					label.Color = TextColor
 
-					nowrap := *gtx
-					nowrap.Constraints.Width.Max = 1024
-					label.Layout(&nowrap)
+					nowrap := gtx
+					nowrap.Constraints.Min.X = 1024
+					nowrap.Constraints.Max.X = 1024
+					_ = label.Layout(nowrap)
+
+					return layout.Dimensions{Size: size}
 				}),
+				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+					areaSizeInt := image.Pt(gtx.Constraints.Max.X, seriesHeight)
+					clip.Rect{Max: areaSizeInt}.Add(gtx.Ops)
 
-				layout.Rigid(func() {
-					gtx.Constraints.Width.Min = gtx.Constraints.Width.Max
-					Fill{Color: selectColor(i, RowBackgroundEven, RowBackgroundOdd)}.Layout(gtx)
-
-					areaSize := f32.Point{
-						X: float32(gtx.Constraints.Width.Min),
-						Y: float32(gtx.Constraints.Height.Min),
-					}
+					paint.Fill(gtx.Ops, selectColor(i, RowBackgroundEven, RowBackgroundOdd))
+					areaSize := layout.FPt(areaSizeInt)
 
 					samples := areaSize.X / SampleWidth
 					low := int(float32(collection.SampleHead) - samples)
@@ -132,84 +133,63 @@ func (view *View) Update(gtx *layout.Context, th *material.Theme) {
 						sample := series.Samples[p%collection.SampleCount]
 
 						if p == collection.SampleHead {
-							// TODO: transparency doesn't seem to work
-							FillRect{
-								Color: color.RGBA{0x30, 0x30, 0x30, 0xFF},
-								Rect: f32.Rectangle{
-									Min: f32.Point{X: corner.X, Y: 0},
-									Max: f32.Point{X: corner.X + SampleWidth, Y: areaSize.Y},
-								},
-							}.Layout(gtx)
+							headColor := color.NRGBA{0x30, 0x30, 0x30, 0xFF}
+							FillRect(gtx.Ops, headColor, f32.Rectangle{
+								Min: f32.Point{X: corner.X, Y: 0},
+								Max: f32.Point{X: corner.X + SampleWidth, Y: areaSize.Y},
+							})
+							continue
 						}
 
 						if sample.AllocBytes > 0 {
-							FillRect{
-								Color: g.HSL(0, 0.6, g.LerpClamp(float32(sample.AllocBytes)*prop, 0.3, 0.7)),
-								Rect: f32.Rectangle{
-									Min: corner,
-									Max: corner.Add(f32.Point{
-										X: SampleWidth,
-										Y: float32(sample.AllocBytes) * scale,
-									}),
-								},
-							}.Layout(gtx)
+							c := g.HSL(0, 0.6, g.LerpClamp(float32(sample.AllocBytes)*prop, 0.3, 0.7))
+							FillRect(gtx.Ops, c, f32.Rectangle{
+								Min: corner,
+								Max: corner.Add(f32.Point{
+									X: SampleWidth,
+									Y: float32(sample.AllocBytes) * scale,
+								}),
+							})
 						}
 
 						if sample.FreeBytes > 0 {
-							FillRect{
-								Color: g.HSL(0.3, 0.6, g.LerpClamp(float32(sample.FreeBytes)*prop, 0.3, 0.7)),
-								Rect: f32.Rectangle{
-									Min: corner,
-									Max: corner.Add(f32.Point{
-										X: SampleWidth,
-										Y: float32(-sample.FreeBytes) * scale,
-									}),
-								},
-							}.Layout(gtx)
+							c := g.HSL(0.3, 0.6, g.LerpClamp(float32(sample.FreeBytes)*prop, 0.3, 0.7))
+							FillRect(gtx.Ops, c, f32.Rectangle{
+								Min: corner,
+								Max: corner.Add(f32.Point{
+									X: SampleWidth,
+									Y: float32(-sample.FreeBytes) * scale,
+								}),
+							})
 						}
 
 						corner.X += SampleWidth
 					}
+
+					return layout.Dimensions{Size: areaSizeInt}
 				}),
 			)
 		})
 	})
 }
 
-type Fill struct {
-	Color color.RGBA
-}
+func FillRect(ops *op.Ops, c color.NRGBA, r f32.Rectangle) {
+	defer op.Push(ops).Pop()
 
-func (f Fill) Layout(gtx *layout.Context) {
-	cs := gtx.Constraints
-	d := image.Point{X: cs.Width.Min, Y: cs.Height.Min}
-	dr := f32.Rectangle{
-		Max: f32.Point{X: float32(d.X), Y: float32(d.Y)},
-	}
-	paint.ColorOp{Color: f.Color}.Add(gtx.Ops)
-	paint.PaintOp{Rect: dr}.Add(gtx.Ops)
-	gtx.Dimensions = layout.Dimensions{Size: d}
-}
-
-type FillRect struct {
-	Color color.RGBA
-	Rect  f32.Rectangle
-}
-
-func (f FillRect) Layout(gtx *layout.Context) {
-	paint.ColorOp{Color: f.Color}.Add(gtx.Ops)
-	paint.PaintOp{Rect: f.Rect.Canon()}.Add(gtx.Ops)
+	clip.RRect{Rect: r}.Add(ops)
+	paint.ColorOp{Color: c}.Add(ops)
+	paint.PaintOp{}.Add(ops)
 }
 
 var (
-	BackgroundColor    = color.RGBA{0x00, 0x00, 0x00, 0xFF}
-	RowBackgroundEven  = color.RGBA{0x11, 0x11, 0x11, 0xFF}
-	RowBackgroundEvenH = color.RGBA{0x18, 0x18, 0x18, 0xFF}
-	RowBackgroundOdd   = color.RGBA{0x22, 0x22, 0x22, 0xFF}
-	RowBackgroundOddH  = color.RGBA{0x28, 0x28, 0x28, 0xFF}
-	TextColor          = color.RGBA{0xFF, 0xFF, 0xFF, 0xFF}
+	BackgroundColor    = color.NRGBA{0x00, 0x00, 0x00, 0xFF}
+	RowBackgroundEven  = color.NRGBA{0x11, 0x11, 0x11, 0xFF}
+	RowBackgroundEvenH = color.NRGBA{0x18, 0x18, 0x18, 0xFF}
+	RowBackgroundOdd   = color.NRGBA{0x22, 0x22, 0x22, 0xFF}
+	RowBackgroundOddH  = color.NRGBA{0x28, 0x28, 0x28, 0xFF}
+	TextColor          = color.NRGBA{0xFF, 0xFF, 0xFF, 0xFF}
 )
 
-func selectColor(i int, values ...color.RGBA) color.RGBA {
+func selectColor(i int, values ...color.NRGBA) color.NRGBA {
 	return values[i%len(values)]
 }

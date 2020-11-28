@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"gioui.org/app"
-	"gioui.org/font/gofont"
 	"gioui.org/unit"
 	"golang.org/x/sync/errgroup"
 
@@ -20,7 +19,6 @@ import (
 
 func init() {
 	runtime.LockOSThread()
-	gofont.Register()
 }
 
 func main() {
