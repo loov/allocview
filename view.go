@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"gioui.org/app"
-	"gioui.org/f32"
 	"gioui.org/font/gofont"
 	"gioui.org/io/system"
 	"gioui.org/layout"
@@ -84,20 +83,19 @@ func (view *View) Update(gtx layout.Context, th *material.Theme) {
 
 	view.series.Layout(gtx, len(collection.List), func(gtx layout.Context, i int) layout.Dimensions {
 		return inset.Layout(gtx, func(gtx layout.Context) (dimension layout.Dimensions) {
-			captionWidth := gtx.Px(unit.Dp(CaptionWidth))
-			seriesHeight := gtx.Px(unit.Dp(SeriesHeight))
+			captionWidth := gtx.Dp(CaptionWidth)
+			seriesHeight := gtx.Dp(SeriesHeight)
 			series := collection.List[i]
 
 			return layout.Flex{}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					size := image.Pt(captionWidth, seriesHeight)
-					clip.Rect{Max: size}.Add(gtx.Ops)
-					paint.Fill(gtx.Ops, selectColor(i, RowBackgroundEvenH, RowBackgroundOddH))
+					FillRect(gtx.Ops, selectColor(i, RowBackgroundEvenH, RowBackgroundOddH), image.Rectangle{Max: size})
 
 					name := view.Summary.StackAsString(series.Stack)
 					// TODO: don't wrap lines
 					live := SizeToString(series.TotalAllocBytes) + " / " + strconv.Itoa(int(series.TotalAllocObjects))
-					label := material.Label(th, unit.Dp(CaptionHeight-3), name+live)
+					label := material.Label(th, unit.Sp(CaptionHeight-3), name+live)
 					label.Color = TextColor
 
 					nowrap := gtx
@@ -108,25 +106,22 @@ func (view *View) Update(gtx layout.Context, th *material.Theme) {
 					return layout.Dimensions{Size: size}
 				}),
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					areaSizeInt := image.Pt(gtx.Constraints.Max.X, seriesHeight)
-					clip.Rect{Max: areaSizeInt}.Add(gtx.Ops)
-
-					paint.Fill(gtx.Ops, selectColor(i, RowBackgroundEven, RowBackgroundOdd))
-					areaSize := layout.FPt(areaSizeInt)
+					areaSize := image.Pt(gtx.Constraints.Max.X, seriesHeight)
+					FillRect(gtx.Ops, selectColor(i, RowBackgroundEven, RowBackgroundOdd), image.Rectangle{Max: areaSize})
 
 					samples := areaSize.X / SampleWidth
-					low := int(float32(collection.SampleHead) - samples)
+					low := collection.SampleHead - samples
 					if low < 0 {
 						low = 0
 					}
-					high := low + int(g.Ceil(samples))
+					high := low + samples
 
 					max := series.MaxSampleBytes()
 
 					prop := 1.0 / float32(max+1)
-					scale := (areaSize.Y / 2) / float32(max+1)
+					scale := float32(areaSize.Y/2) / float32(max+1)
 
-					corner := f32.Point{
+					corner := image.Point{
 						Y: areaSize.Y / 2,
 					}
 					for p := low; p < high; p++ {
@@ -134,31 +129,31 @@ func (view *View) Update(gtx layout.Context, th *material.Theme) {
 
 						if p == collection.SampleHead {
 							headColor := color.NRGBA{0x30, 0x30, 0x30, 0xFF}
-							FillRect(gtx.Ops, headColor, f32.Rectangle{
-								Min: f32.Point{X: corner.X, Y: 0},
-								Max: f32.Point{X: corner.X + SampleWidth, Y: areaSize.Y},
+							FillRect(gtx.Ops, headColor, image.Rectangle{
+								Min: image.Point{X: int(corner.X), Y: 0},
+								Max: image.Point{X: int(corner.X + SampleWidth), Y: int(areaSize.Y)},
 							})
 							continue
 						}
 
 						if sample.AllocBytes > 0 {
 							c := g.HSL(0, 0.6, g.LerpClamp(float32(sample.AllocBytes)*prop, 0.3, 0.7))
-							FillRect(gtx.Ops, c, f32.Rectangle{
+							FillRect(gtx.Ops, c, image.Rectangle{
 								Min: corner,
-								Max: corner.Add(f32.Point{
+								Max: corner.Add(image.Point{
 									X: SampleWidth,
-									Y: float32(sample.AllocBytes) * scale,
+									Y: int(float32(sample.AllocBytes) * scale),
 								}),
 							})
 						}
 
 						if sample.FreeBytes > 0 {
 							c := g.HSL(0.3, 0.6, g.LerpClamp(float32(sample.FreeBytes)*prop, 0.3, 0.7))
-							FillRect(gtx.Ops, c, f32.Rectangle{
+							FillRect(gtx.Ops, c, image.Rectangle{
 								Min: corner,
-								Max: corner.Add(f32.Point{
+								Max: corner.Add(image.Point{
 									X: SampleWidth,
-									Y: float32(-sample.FreeBytes) * scale,
+									Y: int(float32(-sample.FreeBytes) * scale),
 								}),
 							})
 						}
@@ -166,19 +161,15 @@ func (view *View) Update(gtx layout.Context, th *material.Theme) {
 						corner.X += SampleWidth
 					}
 
-					return layout.Dimensions{Size: areaSizeInt}
+					return layout.Dimensions{Size: areaSize}
 				}),
 			)
 		})
 	})
 }
 
-func FillRect(ops *op.Ops, c color.NRGBA, r f32.Rectangle) {
-	defer op.Push(ops).Pop()
-
-	clip.RRect{Rect: r}.Add(ops)
-	paint.ColorOp{Color: c}.Add(ops)
-	paint.PaintOp{}.Add(ops)
+func FillRect(ops *op.Ops, c color.NRGBA, r image.Rectangle) {
+	paint.FillShape(ops, c, clip.Rect(r).Op())
 }
 
 var (
